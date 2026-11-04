@@ -97,6 +97,10 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
           style: plotCss(spec, palette),
           background: palette.background,
           color: { range: palette.colors },
+          marginTop: spec.margin?.top,
+          marginRight: spec.margin?.right,
+          marginBottom: spec.margin?.bottom,
+          marginLeft: spec.margin?.left,
         };
         mergeHints(options, familyBuilder.hints(spec));
         mergeHints(options, axisScaleOptions(spec, palette));
@@ -121,10 +125,16 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
       }));
 
       container.append(wrapper);
-      // The legend sits between the drawing and the caption; DOM order —
-      // not flex ordering — decides the visual position.
-      renderLegend(container, spec, style, handlers.onToggle);
+      // Legend placement: top/left render before the drawing, bottom/right
+      // after it — DOM order decides the visual position in this version.
+      const legendBefore = ['top', 'left'].includes(spec.legend?.position ?? 'top');
+      if (legendBefore) {
+        renderLegend(container, spec, style, handlers.onToggle);
+      }
       renderCaption(container, spec, style);
+      if (!legendBefore) {
+        renderLegend(container, spec, style, handlers.onToggle);
+      }
 
       let released = false;
       return {

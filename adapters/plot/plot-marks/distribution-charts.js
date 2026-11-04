@@ -3,7 +3,6 @@
 // the mark) and density (kernel smoothing over the 2-D cloud).
 
 import * as Plot from '@observablehq/plot';
-import { bindDatum } from '../plot-interaction.js';
 
 /**
  * Builds the marks for one distribution-family chart.
@@ -15,7 +14,10 @@ export function buildDistributionMarks(spec) {
 
   switch (spec.type) {
     case 'histogram':
-      return [Plot.rectY(rows, bindDatum(Plot.binX({ y: 'count' }, { x: 'x' }), rows))];
+      // No datum binding: binX regroups rows into bins, so a per-element
+      // row stamp would misattribute the click. Clicks on a bin report
+      // chart-level identity.
+      return [Plot.rectY(rows, Plot.binX({ y: 'count' }, { x: 'x' }))];
     case 'boxPlot':
       return [Plot.boxY(rows, { x: 'x', y: 'y' })];
     case 'density':

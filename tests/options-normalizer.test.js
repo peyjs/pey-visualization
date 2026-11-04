@@ -74,6 +74,8 @@ test('should_reject_invalid_option_values_with_their_field', () => {
     [{ axes: { x: { tickFormat: 'x' } } }, 'axis-tick-format-not-a-function', 'axes.x.tickFormat'],
     [{ text: { direction: 'up' } }, 'unknown-text-direction', 'text.direction'],
     [{ text: { font: 12 } }, 'font-not-a-string', 'text.font'],
+    [{ margin: 'big' }, 'margin-not-an-object', 'margin'],
+    [{ margin: { top: -1 } }, 'margin-side-not-a-positive-number', 'margin.top'],
     [{ title: 5 }, 'title-not-a-string', 'title'],
     [{ channels: 'x' }, 'channels-not-an-object', 'channels'],
     ['nope', 'options-not-an-object', 'options'],
