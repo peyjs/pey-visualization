@@ -17,10 +17,12 @@ test('should_register_charts_with_unique_ids_and_return_them', () => {
   assert.equal(store.get(second).id, second);
 });
 
-test('should_replace_an_entry_after_an_update', () => {
+test('should_keep_entries_by_reference_so_live_updates_stay_visible', () => {
   const store = createChartStore();
   const id = store.add({ spec: { title: 'قدیمی' } });
-  store.set(id, { spec: { title: 'تازه' } });
+  const entry = store.get(id);
+  entry.spec = { title: 'تازه' };
+
   assert.equal(store.get(id).spec.title, 'تازه');
   assert.equal(store.ids().length, 1);
 });
