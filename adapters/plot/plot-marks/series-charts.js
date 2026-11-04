@@ -12,7 +12,7 @@ import { bindDatum } from '../plot-interaction.js';
  */
 export function buildSeriesMarks(spec) {
   const rows = spec.data.rows;
-  const hasSeries = rows.some((row) => row.series !== null);
+  const hasSeries = rows.some((row) => row.series != null);
   const seriesField = hasSeries ? 'series' : undefined;
   const isTemporal = rows.length > 0 && rows.every((row) => row.x instanceof Date);
 
@@ -26,10 +26,9 @@ export function buildSeriesMarks(spec) {
         markerEnd: hasSeries ? undefined : 'circle',
       }, rows, false))];
     case 'area':
-      return [Plot.area(rows, {
+      return [Plot.areaY(rows, {
         x: 'x',
-        y1: 0,
-        y2: 'y',
+        y: 'y',
         fill: seriesField,
       })];
     case 'stackedArea':
