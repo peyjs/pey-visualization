@@ -1,24 +1,22 @@
 import { applyWrapperStyle } from './plot-empty-state.js';
 
 // The chart legend: one toggle per data series. Toggling hides/shows the
-// series instantly (the renderer re-renders) and reports the switch to the
-// service for the series-toggled event. Recognized text travels from the
-// series ids the host's data carries — the plugin invents no labels.
+// series instantly (the renderer redraws) and reports the switch to the
+// service for the series-toggled event. Labels are the series ids the
+// host's data carries — the plugin invents no labels.
 
 /**
- * Renders the legend under/over the plot and wires the toggles.
+ * Renders the legend for the chart's series.
  * @param {object} container Container element.
- * @param {object} spec Chart spec (legend?, data.seriesIds?).
+ * @param {object} spec Chart spec (data.seriesIds).
  * @param {object} style Wrapper styles.
- * @param {Map} visibility Current per-series visibility.
  * @param {Function} onToggle Called as (seriesId, visible) on a switch.
- * @returns {void}
+ * @returns {boolean} True when a legend was rendered.
  */
-export function renderLegend(container, spec, style, visibility, onToggle) {
+export function renderLegend(container, spec, style, onToggle) {
   const seriesIds = spec.data?.seriesIds ?? [];
-  const wantsLegend = spec.legend?.visible !== false && seriesIds.length > 1;
-  if (!wantsLegend) {
-    return;
+  if (spec.legend?.visible === false || seriesIds.length < 2) {
+    return false;
   }
   const legend = globalThis.document.createElement('div');
   legend.className = 'pey-vis-legend';
@@ -27,11 +25,6 @@ export function renderLegend(container, spec, style, visibility, onToggle) {
   legend.style.flexWrap = 'wrap';
   legend.style.gap = '10px';
   legend.style.margin = '6px 0';
-  if (spec.legend?.position === 'bottom') {
-    legend.style.order = '2';
-  } else {
-    legend.style.order = '-1';
-  }
 
   for (const seriesId of seriesIds) {
     const item = globalThis.document.createElement('label');
@@ -42,7 +35,7 @@ export function renderLegend(container, spec, style, visibility, onToggle) {
 
     const checkbox = globalThis.document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = visibility.get(seriesId) ?? true;
+    checkbox.checked = true;
     checkbox.addEventListener('change', () => {
       onToggle(seriesId, checkbox.checked);
     });
@@ -54,5 +47,5 @@ export function renderLegend(container, spec, style, visibility, onToggle) {
     legend.append(item);
   }
   container.append(legend);
+  return true;
 }
-
