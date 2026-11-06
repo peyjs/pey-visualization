@@ -4,6 +4,7 @@
 
 import * as Plot from '@observablehq/plot';
 import { bindDatum } from '../plot-interaction.js';
+import { tipMark } from './tips.js';
 
 /**
  * Builds the marks for one series-family chart.
@@ -19,24 +20,33 @@ export function buildSeriesMarks(spec) {
   switch (spec.type) {
     case 'line':
     case 'timeSeries':
-      return [Plot.line(rows, bindDatum({
-        x: 'x',
-        y: 'y',
-        stroke: seriesField,
-        markerEnd: hasSeries ? undefined : 'circle',
-      }, rows, false))];
+      return [
+        Plot.line(rows, bindDatum({
+          x: 'x',
+          y: 'y',
+          stroke: seriesField,
+          markerEnd: hasSeries ? undefined : 'circle',
+        }, rows, false)),
+        tipMark(rows),
+      ].filter(Boolean);
     case 'area':
-      return [Plot.areaY(rows, {
-        x: 'x',
-        y: 'y',
-        fill: seriesField,
-      })];
+      return [
+        Plot.areaY(rows, {
+          x: 'x',
+          y: 'y',
+          fill: seriesField,
+        }),
+        tipMark(rows),
+      ].filter(Boolean);
     case 'stackedArea':
-      return [Plot.areaY(rows, bindDatum({
-        x: 'x',
-        y: 'y',
-        fill: 'series',
-      }, rows, false))];
+      return [
+        Plot.areaY(rows, bindDatum({
+          x: 'x',
+          y: 'y',
+          fill: 'series',
+        }, rows, false)),
+        tipMark(rows),
+      ].filter(Boolean);
     default:
       return [];
   }

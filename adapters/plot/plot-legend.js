@@ -1,9 +1,9 @@
-import { applyWrapperStyle } from './plot-empty-state.js';
-
 // The chart legend: one toggle per data series. Toggling hides/shows the
-// series instantly (the renderer redraws) and reports the switch to the
+// series instantly (the service redraws) and reports the switch to the
 // service for the series-toggled event. Labels are the series ids the
 // host's data carries — the plugin invents no labels.
+
+import { applyWrapperStyle } from './plot-empty-state.js';
 
 /**
  * Renders the legend for the chart's series.

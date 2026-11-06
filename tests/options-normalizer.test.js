@@ -11,12 +11,12 @@ test('should_default_to_the_light_theme_when_no_options_are_given', () => {
   assert.equal(channels, undefined);
 });
 
-test('should_use_the_plugin_config_theme_as_the_default', () => {
+test('should_use_the_plugin_config_theme_as_the_default_when_no_options_are_given', () => {
   assert.equal(normalizeOptions(undefined, 'line', { theme: 'dark' }).spec.theme, 'dark');
   assert.equal(normalizeOptions({}, 'line', { theme: 'bogus' }).spec.theme, 'light');
 });
 
-test('should_accept_a_named_theme_and_a_custom_palette', () => {
+test('should_accept_a_named_theme_and_a_custom_palette_when_the_host_supplies_one', () => {
   const { spec } = normalizeOptions({ theme: 'dark' }, 'bar');
   assert.equal(spec.theme, 'dark');
 
@@ -26,12 +26,12 @@ test('should_accept_a_named_theme_and_a_custom_palette', () => {
   assert.deepEqual(custom.spec.palette, { colors: ['#111', '#222'], background: '#000', textColor: '#fff' });
 });
 
-test('should_carry_the_channel_field_names_for_data_validation', () => {
+test('should_carry_the_channel_field_names_when_the_host_names_its_columns', () => {
   const { channels } = normalizeOptions({ channels: { x: 'day', y: 'amount' } }, 'line');
   assert.deepEqual(channels, { x: 'day', y: 'amount' });
 });
 
-test('should_normalize_size_title_legend_axes_and_text_slices', () => {
+test('should_normalize_display_slices_when_the_host_supplies_display_options', () => {
   const { spec } = normalizeOptions({
     title: 'فروش ماه',
     caption: 'بر حسب میلیون تومان',
@@ -59,7 +59,7 @@ test('should_normalize_size_title_legend_axes_and_text_slices', () => {
   });
 });
 
-test('should_reject_invalid_option_values_with_their_field', () => {
+test('should_reject_invalid_option_values_when_any_slice_is_malformed', () => {
   const cases = [
     [{ theme: 'sepia' }, 'unknown-theme', 'theme'],
     [{ palette: 'red' }, 'palette-not-an-object', 'palette'],

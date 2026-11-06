@@ -17,37 +17,39 @@ function spec(type, rows, extra = {}) {
 const xy = [{ x: 1, y: 2 }, { x: 2, y: 4 }];
 const xySeries = [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }];
 
-test('should_build_one_mark_per_series_type', () => {
+test('should_build_a_mark_and_a_tooltip_per_series_type_when_rows_are_present', () => {
   for (const type of ['line', 'timeSeries', 'area', 'stackedArea']) {
     const marks = buildSeriesMarks(spec(type, xySeries));
-    assert.equal(marks.length, 1, type);
+    assert.equal(marks.length, 2, type);
+    assert.ok(marks[1].channels?.title !== undefined, type);
   }
 });
 
-test('should_build_line_marks_with_and_without_series_stroke', () => {
+test('should_build_line_marks_with_series_stroke_only_when_a_series_exists', () => {
   const plain = buildSeriesMarks(spec('line', xy));
   const multi = buildSeriesMarks(spec('line', xySeries));
   assert.equal(plain[0].channels.stroke, undefined);
   assert.equal(multi[0].channels.stroke.value, 'series');
 });
 
-test('should_build_bar_marks_per_type_and_orientation', () => {
-  assert.equal(buildBarMarks(spec('bar', [{ x: 'الف', y: 5, series: null }])).length, 1);
-  assert.equal(buildBarMarks(spec('bar', xy, { orientation: 'horizontal' })).length, 1);
-  assert.equal(buildBarMarks(spec('groupedBar', xySeries)).length, 1);
-  assert.equal(buildBarMarks(spec('stackedBar', xySeries)).length, 1);
+test('should_build_bar_and_tooltip_marks_when_type_and_orientation_vary', () => {
+  assert.equal(buildBarMarks(spec('bar', [{ x: 'الف', y: 5, series: null }])).length, 2);
+  assert.equal(buildBarMarks(spec('bar', xy, { orientation: 'horizontal' })).length, 2);
+  assert.equal(buildBarMarks(spec('groupedBar', xySeries)).length, 2);
+  assert.equal(buildBarMarks(spec('stackedBar', xySeries)).length, 2);
 });
 
-test('should_build_point_marks_with_size_only_for_bubble', () => {
+test('should_build_point_marks_with_a_size_channel_only_when_type_is_bubble', () => {
   const scatter = buildPointMarks(spec('scatter', xy));
   const bubble = buildPointMarks(spec('bubble', [{ x: 1, y: 2, size: 9 }]));
-  assert.equal(scatter.length, 1);
+  assert.equal(scatter.length, 2);
   assert.equal(scatter[0].channels.r, undefined);
-  assert.equal(bubble.length, 1);
+  assert.ok(scatter[1].channels?.title !== undefined);
+  assert.equal(bubble.length, 2);
   assert.equal(bubble[0].channels.r.value, 'size');
 });
 
-test('should_build_distribution_marks_per_type', () => {
+test('should_build_a_single_aggregated_mark_when_each_distribution_type_is_checked', () => {
   for (const [type, rows] of [
     ['histogram', [{ x: 1.5, y: null }]],
     ['boxPlot', [{ x: 'الف', y: 1 }]],
@@ -57,13 +59,19 @@ test('should_build_distribution_marks_per_type', () => {
   }
 });
 
-test('should_build_one_cell_mark_for_the_heatmap', () => {
+test('should_build_cell_and_tooltip_marks_when_the_heatmap_has_values', () => {
   const marks = buildHeatmapMarks(spec('heatmap', [{ x: 'a', y: 'b', value: 3 }]));
-  assert.equal(marks.length, 1);
+  assert.equal(marks.length, 2);
   assert.equal(marks[0].channels.fill.value, 'value');
+  assert.ok(marks[1].channels?.title !== undefined);
 });
 
-test('should_stamp_the_datum_binding_on_discrete_marks', () => {
+test('should_skip_the_tooltip_when_data_is_empty_or_the_family_is_aggregated', () => {
+  assert.equal(buildSeriesMarks(spec('line', [])).length, 1, 'an empty row set has no tip mark');
+  assert.equal(buildDistributionMarks(spec('histogram', [{ x: 1.5, y: null }])).length, 1, 'aggregated families get no tip');
+});
+
+test('should_stamp_the_datum_binding_when_a_discrete_mark_is_built', () => {
   const [mark] = buildPointMarks(spec('scatter', xy));
   // The binding render wraps the mark's render — invoking it without a
   // real DOM just exercises the pass-through path.

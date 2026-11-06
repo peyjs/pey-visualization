@@ -4,6 +4,7 @@
 
 import * as Plot from '@observablehq/plot';
 import { bindDatum } from '../plot-interaction.js';
+import { tipMark } from './tips.js';
 
 /**
  * Builds the marks for one bar-family chart.
@@ -18,15 +19,21 @@ export function buildBarMarks(spec) {
     case 'bar':
       return [horizontal
         ? Plot.barX(rows, bindDatum({ x: 'y', y: 'x' }, rows))
-        : Plot.barY(rows, bindDatum({ x: 'x', y: 'y' }, rows))];
+        : Plot.barY(rows, bindDatum({ x: 'x', y: 'y' }, rows)),
+        tipMark(rows, horizontal ? { x: 'y', y: 'x' } : {}),
+      ].filter(Boolean);
     case 'groupedBar':
       return [horizontal
         ? Plot.barX(rows, bindDatum({ fy: 'series', x: 'y', y: 'x', fill: 'series' }, rows))
-        : Plot.barY(rows, bindDatum({ fx: 'series', x: 'x', y: 'y', fill: 'series' }, rows))];
+        : Plot.barY(rows, bindDatum({ fx: 'series', x: 'x', y: 'y', fill: 'series' }, rows)),
+        tipMark(rows, horizontal ? { x: 'y', y: 'x' } : {}),
+      ].filter(Boolean);
     case 'stackedBar':
       return [horizontal
         ? Plot.barX(rows, bindDatum({ x: 'y', y: 'x', fill: 'series' }, rows))
-        : Plot.barY(rows, bindDatum({ x: 'x', y: 'y', fill: 'series' }, rows))];
+        : Plot.barY(rows, bindDatum({ x: 'x', y: 'y', fill: 'series' }, rows)),
+        tipMark(rows, horizontal ? { x: 'y', y: 'x' } : {}),
+      ].filter(Boolean);
     default:
       return [];
   }

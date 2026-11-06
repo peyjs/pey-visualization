@@ -73,7 +73,7 @@ function createLine(service, overrides = {}) {
 
 // --- create ---------------------------------------------------------------
 
-test('should_create_independent_charts_with_unique_ids', () => {
+test('should_create_independent_charts_with_unique_ids_when_created_one_after_another', () => {
   const { service } = createService();
   const first = createLine(service);
   const second = createLine(service);
@@ -82,7 +82,7 @@ test('should_create_independent_charts_with_unique_ids', () => {
   assert.equal(typeof first.id, 'string');
 });
 
-test('should_hand_the_renderer_a_normalized_library_neutral_spec', () => {
+test('should_hand_the_renderer_a_normalized_library_neutral_spec_when_a_chart_is_created', () => {
   const { service, renderer } = createService();
   createLine(service, {
     data: { rows: [{ day: 'شنبه', amount: 3 }] },
@@ -95,7 +95,7 @@ test('should_hand_the_renderer_a_normalized_library_neutral_spec', () => {
   assert.deepEqual(spec.data.rows, [{ x: 'شنبه', y: 3, series: null }]);
 });
 
-test('should_reject_an_invalid_container_with_its_own_code', () => {
+test('should_reject_an_invalid_container_with_its_own_code_when_the_container_is_not_an_element', () => {
   const { service } = createService();
 
   for (const container of [null, undefined, '', '#missing-in-node']) {
@@ -107,7 +107,7 @@ test('should_reject_an_invalid_container_with_its_own_code', () => {
   }
 });
 
-test('should_reject_unknown_types_and_invalid_data_and_options', () => {
+test('should_reject_unknown_types_and_invalid_data_and_options_when_validation_fails', () => {
   const { service } = createService();
 
   assert.throws(
@@ -153,7 +153,7 @@ test('should_resolve_a_selector_through_the_document_when_given_a_string', () =>
 
 // --- update ----------------------------------------------------------------
 
-test('should_update_data_alone_and_keep_the_previous_options', () => {
+test('should_update_data_alone_and_keep_the_previous_options_when_only_data_is_sent', () => {
   const { service, renderer } = createService();
   const { id } = createLine(service);
 
@@ -164,7 +164,7 @@ test('should_update_data_alone_and_keep_the_previous_options', () => {
   assert.equal(spec.title, 'اولیه');
 });
 
-test('should_update_options_alone_and_keep_the_previous_data', () => {
+test('should_update_options_alone_and_keep_the_previous_data_when_only_options_are_sent', () => {
   const { service, renderer } = createService();
   const { id } = createLine(service);
 
@@ -176,7 +176,7 @@ test('should_update_options_alone_and_keep_the_previous_data', () => {
   assert.equal(spec.theme, 'dark');
 });
 
-test('should_reject_an_empty_update_and_unknown_ids', () => {
+test('should_reject_an_empty_update_and_unknown_ids_when_the_input_is_useless', () => {
   const { service } = createService();
   const { id } = createLine(service);
 
@@ -189,7 +189,7 @@ test('should_reject_an_empty_update_and_unknown_ids', () => {
 
 // --- remove ----------------------------------------------------------------
 
-test('should_remove_one_chart_without_disturbing_the_others', () => {
+test('should_remove_one_chart_without_disturbing_the_others_when_others_exist', () => {
   const { service, renderer } = createService();
   const first = createLine(service);
   const second = createLine(service);
@@ -202,14 +202,14 @@ test('should_remove_one_chart_without_disturbing_the_others', () => {
   assert.equal(service.update(second.id, { data: { rows: [{ x: 1, y: 1 }] } }).ok, true);
 });
 
-test('should_fail_removing_an_unknown_chart', () => {
+test('should_fail_removing_an_unknown_chart_when_the_id_is_unknown', () => {
   const { service } = createService();
   assert.throws(() => service.remove('nope'), (error) => error.code === 'VIS_UNKNOWN_CHART');
 });
 
 // --- interaction events -----------------------------------------------------
 
-test('should_relay_series_toggles_and_keep_the_choice_across_updates', () => {
+test('should_relay_series_toggles_and_keep_the_choice_across_updates_when_the_legend_toggles', () => {
   const { service, renderer, published } = createService();
   const { id } = service.create({
     container: createFakeContainer(),
@@ -226,21 +226,21 @@ test('should_relay_series_toggles_and_keep_the_choice_across_updates', () => {
   assert.equal(spec.data.rows.some((row) => row.series === 'الف'), false);
 });
 
-test('should_relay_clicks_with_chart_series_and_datum_identity', () => {
+test('should_relay_clicks_with_chart_series_and_datum_identity_when_a_mark_is_clicked', () => {
   const { service, renderer, published } = createService();
   const { id } = createLine(service);
 
   lastRender(renderer).handlers.onClick({ seriesId: null, datum: { x: 2, y: 4, series: null } });
 
   assert.deepEqual(published.at(-1), {
-    type: 'visualization:click',
+    type: 'visualization:clicked',
     data: { chartId: id, seriesId: null, datum: { x: 2, y: 4, series: null } },
   });
 });
 
 // --- failure handling --------------------------------------------------------
 
-test('should_report_render_failures_structured_and_leave_no_chart_behind', () => {
+test('should_report_render_failures_structured_and_leave_no_chart_behind_when_the_first_render_fails', () => {
   const { service, renderer } = createService();
   renderer.failNext = true;
 
@@ -271,7 +271,7 @@ test('should_roll_back_to_the_previous_drawing_when_a_re_render_fails', () => {
 
 // --- lifecycle ----------------------------------------------------------------
 
-test('should_remove_every_chart_and_refuse_every_call_after_deactivation', () => {
+test('should_remove_every_chart_and_refuse_every_call_when_the_plugin_deactivates', () => {
   const { service, deactivate, renderer } = createService();
   const first = createLine(service);
   const second = createLine(service);
@@ -288,7 +288,7 @@ test('should_remove_every_chart_and_refuse_every_call_after_deactivation', () =>
   assert.throws(() => service.remove(second.id), (error) => error.code === 'SERVICE_UNAVAILABLE');
 });
 
-test('should_never_put_chart_data_into_events', () => {
+test('should_never_put_chart_data_into_events_when_events_are_published', () => {
   const { service, renderer, published } = createService();
   const { id } = service.create({
     container: createFakeContainer(),
@@ -302,4 +302,46 @@ test('should_never_put_chart_data_into_events', () => {
   const dumped = JSON.stringify(published.map((event) => event.type));
   assert.equal(dumped.includes('محرمانه'), false);
   assert.ok(published.every((event) => event.data.chartId === id));
+});
+
+// --- review regressions ---------------------------------------------------
+
+test('should_leave_the_chart_untouched_when_an_update_fails_validation', () => {
+  const { service, renderer } = createService();
+  const { id } = createLine(service);
+  const rendersBefore = renderer.renders.length;
+
+  // A data validation failure must not poison the stored entry: the chart
+  // keeps its previous data and stays updatable.
+  assert.throws(
+    () => service.update(id, { data: { rows: [{ x: 'نه-عدد', y: 'نه-عدد' }] } }),
+    (error) => error.code === 'VIS_INVALID_DATA',
+  );
+
+  const { spec } = lastRender(renderer);
+  assert.deepEqual(spec.data.rows.map(({ x, y }) => ({ x, y })), LINE_ROWS, 'the previous data survives');
+  assert.equal(renderer.renders.length, rendersBefore, 'no re-render was attempted with poisoned data');
+  const { id: second } = service.update(id, { options: { title: 'بعد از شکست اعتبارسنجی' } });
+  void second;
+  const after = lastRender(renderer);
+  assert.equal(after.spec.title, 'بعد از شکست اعتبارسنجی', 'the chart stays updatable after the failure');
+});
+
+test('should_apply_a_series_toggle_to_the_drawing_immediately_when_toggled', () => {
+  const { service, renderer } = createService();
+  const { id } = service.create({
+    container: createFakeContainer(),
+    type: 'line',
+    data: { rows: [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }] },
+  });
+  const rowsBefore = lastRender(renderer).spec.data.rows.length;
+
+  lastRender(renderer).handlers.onToggle('ب', false);
+
+  const after = lastRender(renderer);
+  assert.ok(after.spec.data.rows.length < rowsBefore, 'the hidden series left the drawing right away');
+
+  // The choice persists across the next update render too.
+  service.update(id, { options: { title: 'تازه' } });
+  assert.equal(lastRender(renderer).spec.data.rows.length, after.spec.data.rows.length);
 });

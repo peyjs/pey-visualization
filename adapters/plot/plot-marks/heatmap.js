@@ -4,6 +4,7 @@
 
 import * as Plot from '@observablehq/plot';
 import { bindDatum } from '../plot-interaction.js';
+import { tipMark } from './tips.js';
 
 /**
  * Builds the marks for one heatmap chart.
@@ -12,12 +13,15 @@ import { bindDatum } from '../plot-interaction.js';
  */
 export function buildHeatmapMarks(spec) {
   const rows = spec.data.rows;
-  return [Plot.cell(rows, bindDatum({
-    x: 'x',
-    y: 'y',
-    fill: 'value',
-    inset: 0.5,
-  }, rows))];
+  return [
+    Plot.cell(rows, bindDatum({
+      x: 'x',
+      y: 'y',
+      fill: 'value',
+      inset: 0.5,
+    }, rows)),
+    tipMark(rows, { withValue: true, pointer: 'near' }),
+  ].filter(Boolean);
 }
 
 /**

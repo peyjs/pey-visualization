@@ -3,6 +3,7 @@
 
 import * as Plot from '@observablehq/plot';
 import { bindDatum } from '../plot-interaction.js';
+import { tipMark } from './tips.js';
 
 /**
  * Builds the marks for one point-family chart.
@@ -15,14 +16,20 @@ export function buildPointMarks(spec) {
   switch (spec.type) {
     case 'scatter':
     case 'dot':
-      return [Plot.dot(rows, bindDatum({ x: 'x', y: 'y' }, rows))];
+      return [
+        Plot.dot(rows, bindDatum({ x: 'x', y: 'y' }, rows)),
+        tipMark(rows, { pointer: 'near' }),
+      ].filter(Boolean);
     case 'bubble':
-      return [Plot.dot(rows, bindDatum({
-        x: 'x',
-        y: 'y',
-        r: 'size',
-        fillOpacity: 0.65,
-      }, rows))];
+      return [
+        Plot.dot(rows, bindDatum({
+          x: 'x',
+          y: 'y',
+          r: 'size',
+          fillOpacity: 0.65,
+        }, rows)),
+        tipMark(rows, { pointer: 'near' }),
+      ].filter(Boolean);
     default:
       return [];
   }

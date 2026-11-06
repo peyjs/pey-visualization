@@ -11,7 +11,7 @@ function rejectsWithReason(promise, reason, field) {
     && (field === undefined || error?.detail?.field === field));
 }
 
-test('should_validate_series_rows_into_canonical_shape', () => {
+test('should_validate_series_rows_into_canonical_shape_when_series_are_present', () => {
   const spec = validateData('line', [
     { day: 'دوشنبه', amount: 10, cat: 'الف' },
     { day: 'سه‌شنبه', amount: 20, cat: 'ب' },
@@ -24,7 +24,7 @@ test('should_validate_series_rows_into_canonical_shape', () => {
   assert.deepEqual(spec.seriesIds, ['الف', 'ب']);
 });
 
-test('should_keep_series_optional_for_plain_rows_but_available_for_stacking', async () => {
+test('should_keep_series_optional_when_plain_rows_are_validated_but_require_it_for_stacking', async () => {
   const plain = validateData('line', [{ x: 1, y: 2 }]);
   assert.deepEqual(plain.rows, [{ x: 1, y: 2, series: null }]);
   assert.equal(plain.seriesIds, null);
@@ -43,13 +43,13 @@ test('should_keep_series_optional_for_plain_rows_but_available_for_stacking', as
   );
 });
 
-test('should_validate_plain_bar_rows_without_series', () => {
+test('should_validate_plain_bar_rows_when_no_series_is_given', () => {
   const spec = validateData('bar', [{ cat: 'الف', v: 5 }], { x: 'cat', y: 'v' });
   assert.deepEqual(spec.rows, [{ x: 'الف', y: 5, series: null }]);
   assert.equal(spec.seriesIds, null);
 });
 
-test('should_validate_point_rows_and_require_size_for_bubble', async () => {
+test('should_require_the_size_channel_when_bubble_rows_are_validated', async () => {
   const scatter = validateData('scatter', [{ a: 1, b: 2 }], { x: 'a', y: 'b' });
   assert.deepEqual(scatter.rows, [{ x: 1, y: 2, size: null }]);
 
@@ -63,7 +63,7 @@ test('should_validate_point_rows_and_require_size_for_bubble', async () => {
   assert.deepEqual(bubble.rows, [{ x: 1, y: 2, size: 30 }]);
 });
 
-test('should_validate_distribution_rows_per_type', () => {
+test('should_validate_distribution_rows_when_each_type_is_checked', () => {
   const histogram = validateData('histogram', [{ v: 1.5 }, { v: 2.5 }], { x: 'v' });
   assert.deepEqual(histogram.rows, [{ x: 1.5, y: null }, { x: 2.5, y: null }]);
 
@@ -71,12 +71,12 @@ test('should_validate_distribution_rows_per_type', () => {
   assert.deepEqual(box.rows, [{ x: 'الف', y: 1 }, { x: 'الف', y: 7 }]);
 });
 
-test('should_validate_heatmap_rows_with_numeric_value', () => {
+test('should_validate_heatmap_rows_when_values_are_numeric', () => {
   const spec = validateData('heatmap', [{ c: 'شنبه', h: '۱۰', t: 31 }], { x: 'c', y: 'h', value: 't' });
   assert.deepEqual(spec.rows, [{ x: 'شنبه', y: '۱۰', value: 31 }]);
 });
 
-test('should_report_missing_or_non_finite_channels_with_row_index', async () => {
+test('should_report_the_row_index_when_a_channel_is_missing_or_non_finite', async () => {
   assert.throws(
     () => validateData('line', [{ x: 1 }, { x: 2 }]),
     (error) => error.code === 'VIS_INVALID_DATA'
@@ -94,7 +94,7 @@ test('should_report_missing_or_non_finite_channels_with_row_index', async () => 
   );
 });
 
-test('should_reject_non_row_shapes_and_series_values_that_are_not_scalar', async () => {
+test('should_reject_non_row_shapes_when_series_values_are_not_scalar', async () => {
   assert.throws(() => validateData('line', 'nope'), (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'not-a-row-list');
   assert.throws(() => validateData('line', { nope: 1 }), (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'not-a-row-list');
   assert.throws(
@@ -103,14 +103,14 @@ test('should_reject_non_row_shapes_and_series_values_that_are_not_scalar', async
   );
 });
 
-test('should_accept_empty_data_for_every_type_as_the_empty_state', () => {
+test('should_accept_empty_data_as_the_empty_state_when_every_type_is_checked', () => {
   for (const type of ['line', 'timeSeries', 'area', 'stackedArea', 'bar', 'groupedBar', 'stackedBar', 'scatter', 'bubble', 'dot', 'histogram', 'boxPlot', 'density', 'heatmap']) {
     const spec = validateData(type, []);
     assert.deepEqual(spec.rows, [], type);
   }
 });
 
-test('should_reject_unknown_chart_types_with_their_own_code', async () => {
+test('should_reject_unknown_chart_types_with_their_own_code_when_the_type_is_unknown', async () => {
   assert.throws(
     () => validateData('pie', [{ x: 1, y: 2 }]),
     (error) => error.code === 'VIS_UNKNOWN_CHART_TYPE' && error.detail.type === 'pie',

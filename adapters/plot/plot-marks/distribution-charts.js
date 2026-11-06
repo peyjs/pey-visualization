@@ -14,9 +14,9 @@ export function buildDistributionMarks(spec) {
 
   switch (spec.type) {
     case 'histogram':
-      // No datum binding: binX regroups rows into bins, so a per-element
-      // row stamp would misattribute the click. Clicks on a bin report
-      // chart-level identity.
+      // No datum binding or tooltip: binX regroups rows into bins, so a
+      // per-element row stamp/title would misattribute the interaction.
+      // Clicks on a bin report chart-level identity.
       return [Plot.rectY(rows, Plot.binX({ y: 'count' }, { x: 'x' }))];
     case 'boxPlot':
       return [Plot.boxY(rows, { x: 'x', y: 'y' })];

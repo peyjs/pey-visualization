@@ -36,12 +36,12 @@ test('should_register_service_when_prepare_is_called', async () => {
   assert.equal(typeof context.onDeactivated, 'function');
 });
 
-test('should_load_the_default_renderer_adapter', async () => {
+test('should_load_the_default_renderer_adapter_when_prepare_runs', async () => {
   const registrations = await prepare(createPrepareContext());
   assert.equal(typeof registrations[0].object.create, 'function');
 });
 
-test('should_reject_startup_for_an_unknown_renderer', async () => {
+test('should_reject_startup_when_the_configured_renderer_is_unknown', async () => {
   const context = createPrepareContext({ config: { adapter: 'NoSuchRenderer' } });
 
   await assert.rejects(
@@ -50,7 +50,7 @@ test('should_reject_startup_for_an_unknown_renderer', async () => {
   );
 });
 
-test('should_activate_without_dependencies', async () => {
+test('should_activate_without_binding_anything_when_there_are_no_dependencies', async () => {
   const { activate } = await import('../index.js');
   await activate({});
 });
@@ -68,6 +68,6 @@ test('should_match_manifest_contract_when_loaded', async () => {
   assert.equal(manifest.provides[0].name, 'pey.visualization.service');
   const methodNames = manifest.provides[0].methods.map((method) => method.name);
   assert.deepEqual(methodNames, ['create', 'update', 'remove']);
-  assert.deepEqual(manifest.events.map((event) => event.name), ['visualization:click', 'visualization:series-toggled']);
+  assert.deepEqual(manifest.events.map((event) => event.name), ['visualization:clicked', 'visualization:series-toggled']);
   assert.deepEqual(manifest.config, { adapter: 'PlotRendererAdapter', adapterConfig: {}, theme: 'light' });
 });

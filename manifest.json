@@ -46,7 +46,7 @@
   ],
   "events": [
     {
-      "name": "visualization:click",
+      "name": "visualization:clicked",
       "description": "The user clicked a chart part the renderer supports selecting. Identifies the chart, the series and the clicked datum when available.",
       "data": [
         { "name": "chartId", "type": "string" },

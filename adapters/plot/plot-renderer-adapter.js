@@ -50,7 +50,9 @@ function mergeHints(options, hints) {
  *   `render(container, spec, handlers) → { release() }`.
  */
 export function createPlotRendererAdapter(adapterConfig = {}) {
-  void adapterConfig;
+  // An injected document lets tests (and exotic hosts) render headless;
+  // in a browser it stays undefined and Plot uses the global document.
+  const injectedDocument = adapterConfig?.document ?? null;
 
   return {
     /**
@@ -74,13 +76,22 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
       // No data is not an error: a quiet placeholder instead of a drawing.
       if (spec.data.rows.length === 0) {
         renderEmptyState(container, style);
-        return { release() {} };
+        // The empty state is host-visible DOM too: releasing it must take
+        // it off the page exactly like the drawn path does (requirement 8.3).
+        return {
+          release() {
+            container.replaceChildren();
+          },
+        };
       }
 
-      const wrapper = globalThis.document.createElement('div');
+      const wrapper = (injectedDocument ?? globalThis.document).createElement('div');
       wrapper.className = 'pey-vis-plot';
       applyWrapperStyle(wrapper, style);
 
+      // Declared before drawPlot so the closure references a binding that
+      // already exists, not one hoisted by call-order luck.
+      let releaseClick = null;
       // Redraws only the drawing itself — the wrapper, title, caption and
       // legend stay put — so resize bursts are cheap and idempotent.
       const drawPlot = () => {
@@ -104,11 +115,13 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
         };
         mergeHints(options, familyBuilder.hints(spec));
         mergeHints(options, axisScaleOptions(spec, palette));
+        if (injectedDocument) {
+          options.document = injectedDocument;
+        }
         const plot = Plot.plot(options);
         releaseClick = attachClick(plot, handlers.onClick);
         wrapper.append(plot);
       };
-      let releaseClick = null;
       drawPlot();
 
       let lastWidth = plotSize(spec, container).width;
