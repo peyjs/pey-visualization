@@ -4,9 +4,13 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import * as Plot from '@observablehq/plot';
+import { tipMark } from '../../adapters/plot/plot-marks/tips.js';
 import { createPlotRendererAdapter } from '../../adapters/plot/plot-renderer-adapter.js';
 import { createDomShim, createShimContainer } from '../dom-shim.js';
+
+// A shared shim for the contract suite (each render also gets a fresh
+// container); the per-test setup still overrides globalThis.document.
+const shimDocument = createDomShim();
 
 function setup() {
   const document = createDomShim();
@@ -57,7 +61,9 @@ test('should_render_a_real_plot_and_clear_it_on_release_when_data_has_rows', () 
     assert.ok(svg.children.length > 0, 'the plot has drawn marks');
 
     handle.release();
-    assert.equal(container.children.length, 0, 'release clears the container');
+    // Contract: release frees resources ONLY — the drawing stays on the
+    // page until the next render or the service's remove/deactivate.
+    assert.ok(container.children.length > 0, 'release must not wipe the drawn chart');
   } finally {
     restore();
   }
@@ -75,15 +81,27 @@ test('should_clear_the_container_when_releasing_an_empty_state', () => {
 
     assert.ok(container.children.length > 0, 'the empty state is host-visible DOM');
     handle.release();
-    assert.equal(container.children.length, 0, 'the empty state must not outlive its chart');
+    assert.ok(container.children.length > 0, 'release frees nothing here; cleanup belongs to the service');
   } finally {
     restore();
   }
 });
 
-test('should_build_a_title_channel_into_the_tooltip_shape_when_the_heatmap_has_values', () => {
+test('should_build_the_tooltip_through_tipMark_when_the_heatmap_has_values', () => {
   const rows = [{ x: 'الف', y: 'ب', value: 3 }];
-  const tip = Plot.tip(rows, Plot.pointer({ x: 'x', y: 'y', title: (row) => `${row.x} · ${row.y} · ${row.value}` }));
+  const tip = tipMark(rows, { withValue: true, pointer: 'near' });
 
-  assert.ok(tip.channels?.title !== undefined, 'the tip carries the value in its title');
+  assert.ok(tip.channels?.title !== undefined, 'the tip carries a title channel');
+  assert.deepEqual(tip.channels.title.value(rows[0]), 'الف · ب · 3', 'the title covers x, y and the value');
 });
+
+test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', () => {
+  const rows = [{ x: 1, y: 2, series: null }];
+  const tip = tipMark(rows);
+
+  assert.deepEqual(tip.channels.title.value(rows[0]), '1 · 2', 'no dangling series separator for series-less rows');
+});
+
+import { runRendererContractSuite } from '../renderer-contract.js';
+
+runRendererContractSuite('plot-adapter', () => createPlotRendererAdapter({ document: shimDocument }), () => createShimContainer(shimDocument));

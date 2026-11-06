@@ -26,8 +26,8 @@ export function applyWrapperStyle(element, style) {
  * @param {object} style Wrapper styles.
  * @returns {void}
  */
-export function renderEmptyState(container, style) {
-  const box = globalThis.document.createElement('div');
+export function renderEmptyState(container, style, documentOf = () => globalThis.document) {
+  const box = documentOf().createElement('div');
   box.className = 'pey-vis-empty';
   box.textContent = EMPTY_MESSAGE;
   applyWrapperStyle(box, style);
@@ -46,11 +46,11 @@ export function renderEmptyState(container, style) {
  * @param {object} style Wrapper styles.
  * @returns {void}
  */
-export function renderTitle(container, spec, style) {
+export function renderTitle(container, spec, style, documentOf = () => globalThis.document) {
   if (!spec.title) {
     return;
   }
-  const heading = globalThis.document.createElement('div');
+  const heading = documentOf().createElement('div');
   heading.className = 'pey-vis-title';
   heading.textContent = spec.title;
   applyWrapperStyle(heading, style);
@@ -66,11 +66,11 @@ export function renderTitle(container, spec, style) {
  * @param {object} style Wrapper styles.
  * @returns {void}
  */
-export function renderCaption(container, spec, style) {
+export function renderCaption(container, spec, style, documentOf = () => globalThis.document) {
   if (!spec.caption) {
     return;
   }
-  const caption = globalThis.document.createElement('div');
+  const caption = documentOf().createElement('div');
   caption.className = 'pey-vis-caption';
   caption.textContent = spec.caption;
   applyWrapperStyle(caption, style);

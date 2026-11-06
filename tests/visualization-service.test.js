@@ -21,6 +21,11 @@ function createFakeRenderer() {
       if (renderer.failWhen && renderer.failWhen(spec)) {
         throw new Error('plot refused these rows');
       }
+      // Mirrors the real adapter contract: render clears the container at
+      // start (a placeholder stands in for the drawn chart) and release
+      // frees resources without touching the container.
+      container.replaceChildren();
+      container.append({ placeholder: true, spec });
       const handle = { release: () => renderer.released.push(spec) };
       renderer.renders.push({ container, spec, handlers, handle });
       return handle;
@@ -222,8 +227,8 @@ test('should_relay_series_toggles_and_keep_the_choice_across_updates_when_the_le
 
   service.update(id, { data: { rows: [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }] } });
   const { spec } = lastRender(renderer);
-  assert.deepEqual(spec.data.seriesIds, ['ب']);
-  assert.equal(spec.data.rows.some((row) => row.series === 'الف'), false);
+  assert.deepEqual(spec.data.seriesIds, ['الف', 'ب'], 'seriesIds stays full so the legend keeps the hidden series toggleable');
+  assert.equal(spec.data.rows.some((row) => row.series === 'الف'), false, 'only the mark rows are filtered');
 });
 
 test('should_relay_clicks_with_chart_series_and_datum_identity_when_a_mark_is_clicked', () => {
