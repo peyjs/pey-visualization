@@ -17,29 +17,57 @@
           "name": "create",
           "description": "Creates one independent chart in a host-provided container (an element or a CSS selector, resolved once) and returns its unique id. Data and display options are validated first: an unknown chart type, invalid container, invalid options or invalid data fail with their own codes; empty data is not an error — the chart renders an empty state.",
           "params": [
-            { "name": "input", "type": "{ container: Element | string, type: string, data: object, options?: object }" }
+            {
+              "name": "input",
+              "type": "{ container: Element | string, type: string, data: object, options?: object }"
+            }
           ],
           "returns": "{ id: string }",
-          "errors": ["VIS_INVALID_CONTAINER", "VIS_UNKNOWN_CHART_TYPE", "VIS_INVALID_DATA", "VIS_INVALID_OPTIONS", "VIS_RENDER_FAILED", "SERVICE_UNAVAILABLE"]
+          "errors": [
+            "VIS_INVALID_CONTAINER",
+            "VIS_UNKNOWN_CHART_TYPE",
+            "VIS_INVALID_DATA",
+            "VIS_INVALID_OPTIONS",
+            "VIS_RENDER_FAILED",
+            "SERVICE_UNAVAILABLE"
+          ]
         },
         {
           "name": "update",
           "description": "Re-renders an existing chart with new data, new options or both. Options given alone keep the previous data; data given alone keep the previous options — unless the caller overrides them. Re-rendering redraws the whole chart; no partial transitions are promised.",
           "params": [
-            { "name": "id", "type": "string — the chart id from create" },
-            { "name": "input", "type": "{ data?: object, options?: object } — at least one of the two" }
+            {
+              "name": "id",
+              "type": "string — the chart id from create"
+            },
+            {
+              "name": "input",
+              "type": "{ data?: object, options?: object } — at least one of the two"
+            }
           ],
           "returns": "{ ok: true, id: string }",
-          "errors": ["VIS_UNKNOWN_CHART", "VIS_INVALID_DATA", "VIS_INVALID_OPTIONS", "VIS_RENDER_FAILED", "SERVICE_UNAVAILABLE"]
+          "errors": [
+            "VIS_UNKNOWN_CHART",
+            "VIS_INVALID_DATA",
+            "VIS_INVALID_OPTIONS",
+            "VIS_RENDER_FAILED",
+            "SERVICE_UNAVAILABLE"
+          ]
         },
         {
           "name": "remove",
           "description": "Removes a chart completely: its display is taken off the page, every resource the plugin kept for it is freed, and other charts continue untouched. An unknown id fails with its own code.",
           "params": [
-            { "name": "id", "type": "string — the chart id from create" }
+            {
+              "name": "id",
+              "type": "string — the chart id from create"
+            }
           ],
           "returns": "{ ok: true }",
-          "errors": ["VIS_UNKNOWN_CHART", "SERVICE_UNAVAILABLE"]
+          "errors": [
+            "VIS_UNKNOWN_CHART",
+            "SERVICE_UNAVAILABLE"
+          ]
         }
       ]
     }
@@ -49,18 +77,54 @@
       "name": "visualization:clicked",
       "description": "The user clicked a chart part the renderer supports selecting. Identifies the chart, the series and the clicked datum when available.",
       "data": [
-        { "name": "chartId", "type": "string" },
-        { "name": "seriesId", "type": "string | null" },
-        { "name": "datum", "type": "object | null" }
+        {
+          "name": "chartId",
+          "type": "string"
+        },
+        {
+          "name": "seriesId",
+          "type": "string | null"
+        },
+        {
+          "name": "datum",
+          "type": "object | null"
+        }
       ]
     },
     {
       "name": "visualization:series-toggled",
       "description": "The user switched a data series on or off through the chart legend.",
       "data": [
-        { "name": "chartId", "type": "string" },
-        { "name": "seriesId", "type": "string" },
-        { "name": "visible", "type": "boolean" }
+        {
+          "name": "chartId",
+          "type": "string"
+        },
+        {
+          "name": "seriesId",
+          "type": "string"
+        },
+        {
+          "name": "visible",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "name": "visualization:render-failed",
+      "description": "A redraw the service initiated on its own (today: the redraw after a legend toggle) failed and was rolled back — the chart keeps its previous drawing. Carries the chart, the operation and the structured error code; raw renderer errors never cross.",
+      "data": [
+        {
+          "name": "chartId",
+          "type": "string"
+        },
+        {
+          "name": "operation",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
       ]
     }
   ],

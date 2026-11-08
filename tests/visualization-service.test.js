@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createVisualizationService } from '../lib/visualization-service.js';
+import { runRendererContractSuite } from './renderer-contract.js';
 
 /**
  * A fake renderer: records every render and its handle, replays toggles
@@ -37,6 +38,9 @@ function createFakeRenderer() {
 function createFakeContainer(width = 800) {
   return {
     appended: [],
+    get children() {
+      return this.appended;
+    },
     clientWidth: width,
     style: {},
     dir: '',
@@ -63,6 +67,10 @@ function createService({ config } = {}) {
 function lastRender(renderer) {
   return renderer.renders.at(-1);
 }
+
+// The service fake must satisfy the same render contract as the real Plot
+// adapter — one suite, both implementations.
+runRendererContractSuite('service-fake-renderer', () => createFakeRenderer(), () => createFakeContainer());
 
 const LINE_ROWS = [{ x: 1, y: 2 }, { x: 2, y: 4 }, { x: 3, y: 6 }];
 
@@ -229,6 +237,52 @@ test('should_relay_series_toggles_and_keep_the_choice_across_updates_when_the_le
   const { spec } = lastRender(renderer);
   assert.deepEqual(spec.data.seriesIds, ['الف', 'ب'], 'seriesIds stays full so the legend keeps the hidden series toggleable');
   assert.equal(spec.data.rows.some((row) => row.series === 'الف'), false, 'only the mark rows are filtered');
+});
+
+test('should_carry_the_visibility_state_on_the_spec_when_the_legend_needs_it', () => {
+  // The legend reads spec.seriesVisibility to render hidden series as
+  // unchecked — a state that lives nowhere on the spec would render every
+  // redraw as "all visible" and make a hidden series unrecoverable.
+  const { service, renderer } = createService();
+  service.create({
+    container: createFakeContainer(),
+    type: 'line',
+    data: { rows: [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }] },
+  });
+
+  lastRender(renderer).handlers.onToggle('الف', false);
+
+  const { spec } = lastRender(renderer);
+  assert.equal(spec.seriesVisibility.get('الف'), false, 'the redrawn spec carries the real state');
+  assert.notEqual(spec.seriesVisibility.get('ب'), false);
+
+  lastRender(renderer).handlers.onToggle('الف', true);
+  assert.notEqual(lastRender(renderer).spec.seriesVisibility.get('الف'), false, 'the series is recoverable');
+});
+
+test('should_report_and_revert_a_failed_toggle_redraw_when_the_renderer_fails', () => {
+  // A redraw failure is never silent: no series-toggled event fires for a
+  // drawing that never happened, the structured failure is published, and
+  // the reverted state is redrawn so picture, state and legend agree.
+  const { service, renderer, published } = createService();
+  const { id } = service.create({
+    container: createFakeContainer(),
+    type: 'line',
+    data: { rows: [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }] },
+  });
+
+  renderer.failWhen = (spec) => spec.data.rows.length === 1;
+  lastRender(renderer).handlers.onToggle('الف', false);
+
+  const types = published.map((event) => event.type);
+  assert.ok(!types.includes('visualization:series-toggled'), 'no toggle event for a redraw that never happened');
+  const failed = published.find((event) => event.type === 'visualization:render-failed');
+  assert.notEqual(failed, undefined, 'the failure is reported to the host');
+  assert.deepEqual(failed.data, { chartId: id, operation: 'series-toggle', code: 'VIS_RENDER_FAILED' });
+
+  const { spec } = lastRender(renderer);
+  assert.notEqual(spec.seriesVisibility.get('الف'), false, 'the reverted state is what the redraw carries');
+  assert.equal(spec.data.rows.length, 2, 'both series are back on the drawing');
 });
 
 test('should_relay_clicks_with_chart_series_and_datum_identity_when_a_mark_is_clicked', () => {

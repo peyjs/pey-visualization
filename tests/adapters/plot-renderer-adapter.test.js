@@ -104,4 +104,42 @@ test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', (
 
 import { runRendererContractSuite } from '../renderer-contract.js';
 
+test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_given', () => {
+  // P1 regression: the visibility state rides on the spec — a legend rebuilt
+  // from a state that lives nowhere renders every series as checked and
+  // makes a hidden series unrecoverable.
+  const { adapter, container, restore } = setup();
+  try {
+    const visibility = new Map([['الف', false]]);
+    adapter.render(container, {
+      type: 'line',
+      data: { rows: ROWS, seriesIds: ['الف', 'ب'] },
+      legend: { visible: true },
+      theme: 'light',
+      seriesVisibility: visibility,
+    }, { onToggle: () => {}, onClick: () => {} });
+
+    const states = {};
+    const walk = (element) => {
+      for (const child of element.children ?? []) {
+        const tag = String(child.tagName ?? '').toLowerCase();
+        if (tag === 'label') {
+          const checkbox = (child.children ?? []).find((node) => String(node.tagName ?? '').toLowerCase() === 'input');
+          const text = (child.children ?? []).find((node) => String(node.tagName ?? '').toLowerCase() === 'span');
+          if (checkbox && text) {
+            states[text.textContent] = checkbox.checked;
+          }
+        }
+        walk(child);
+      }
+    };
+    walk(container);
+
+    assert.deepEqual(states, { 'الف': false, 'ب': true }, 'a hidden series stays in the legend, unchecked');
+  } finally {
+    restore();
+  }
+});
+
+
 runRendererContractSuite('plot-adapter', () => createPlotRendererAdapter({ document: shimDocument }), () => createShimContainer(shimDocument));

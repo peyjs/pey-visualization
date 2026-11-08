@@ -68,6 +68,6 @@ test('should_match_manifest_contract_when_loaded', async () => {
   assert.equal(manifest.provides[0].name, 'pey.visualization.service');
   const methodNames = manifest.provides[0].methods.map((method) => method.name);
   assert.deepEqual(methodNames, ['create', 'update', 'remove']);
-  assert.deepEqual(manifest.events.map((event) => event.name), ['visualization:clicked', 'visualization:series-toggled']);
+  assert.deepEqual(manifest.events.map((event) => event.name), ['visualization:clicked', 'visualization:series-toggled', 'visualization:render-failed']);
   assert.deepEqual(manifest.config, { adapter: 'PlotRendererAdapter', adapterConfig: {}, theme: 'light' });
 });
