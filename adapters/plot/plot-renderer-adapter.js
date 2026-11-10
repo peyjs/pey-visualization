@@ -108,9 +108,14 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
 function renderInto(container, spec, handlers, { style, palette, familyBuilder, documentOf }) {
   // No data is not an error: a quiet placeholder instead of a drawing. Its
   // release frees nothing (no resources were kept) — the container is
-  // cleared by the next render or by the service on remove.
+  // cleared by the next render or by the service on remove. A legend still
+  // renders here when the spec declares series: after hiding every series
+  // the checkboxes must survive, or the hidden series could never be
+  // brought back (renderLegend guards the hidden legend / single-series
+  // cases itself).
   if (spec.data.rows.length === 0) {
     renderEmptyState(container, style, documentOf);
+    renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
     return {
       release() {},
     };

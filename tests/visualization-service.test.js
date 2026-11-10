@@ -239,6 +239,24 @@ test('should_relay_series_toggles_and_keep_the_choice_across_updates_when_the_le
   assert.equal(spec.data.rows.some((row) => row.series === 'الف'), false, 'only the mark rows are filtered');
 });
 
+test('should_release_every_intermediate_handle_when_a_toggle_redraw_fails', () => {
+  // The rollback render's handle must be released before the reverted
+  // redraw replaces it — every failed toggle used to leak a whole live
+  // render (ResizeObserver included).
+  const { service, renderer } = createService();
+  service.create({
+    container: createFakeContainer(),
+    type: 'line',
+    data: { rows: [{ x: 1, y: 2, series: 'الف' }, { x: 2, y: 4, series: 'ب' }] },
+  });
+
+  renderer.failWhen = (spec) => spec.data.rows.length === 1;
+  lastRender(renderer).handlers.onToggle('الف', false);
+  renderer.failWhen = null;
+
+  assert.equal(renderer.released.length, renderer.renders.length - 1, 'only the live handle stays unreleased');
+});
+
 test('should_carry_the_visibility_state_on_the_spec_when_the_legend_needs_it', () => {
   // The legend reads spec.seriesVisibility to render hidden series as
   // unchecked — a state that lives nowhere on the spec would render every

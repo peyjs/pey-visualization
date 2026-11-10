@@ -61,7 +61,7 @@ adapters/plot/plot-marks/*.js   — ترجمه spec به markهای Plot
 - **تم:** `theme: 'light' | 'dark'` یا پالت اختصاصی `palette: { colors, background, textColor, gridColor, axisColor }`. افزونه تم را تشخیص نمی‌دهد؛ با تغییر گزینه دوباره رسم می‌شود.
 - **اندازه:** `width`، `height` یا `aspectRatio` (پیش‌فرض ۱٫۶)؛ بدون عرض صریح، عرض ظرف به کار می‌رود.
 - **عنوان و توضیح:** `title`، `caption` — متنی که میزبان آماده کرده.
-- **راهنما:** `legend: { visible, position: 'top'|'bottom' }` — با بیش از یک سری نمایش داده می‌شود و سوییچ هر سری را می‌دهد.
+- **راهنما:** `legend: { visible, position: 'top'|'right'|'bottom'|'left' }` — با بیش از یک سری نمایش داده می‌شود و سوییچ هر سری را می‌دهد.
 - **محورها:** `axes.x / axes.y` با `label`، `domain: [min, max]` و `tickFormat` (تابع قالب میزبان — افزونه هیچ قالبی از خودش ندارد).
 - **متن:** `text: { direction: 'rtl'|'ltr', font, fontSize }` — جهت متن مستقل از جهت محورها.
 - **جهت میله‌ای:** `orientation: 'vertical'|'horizontal'` (فقط خانواده bar).

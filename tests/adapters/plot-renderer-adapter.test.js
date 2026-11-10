@@ -104,6 +104,41 @@ test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', (
 
 import { runRendererContractSuite } from '../renderer-contract.js';
 
+test('should_keep_the_legend_on_the_empty_state_when_every_series_is_hidden', () => {
+  // Hiding every series filters all rows and the drawing goes empty — but
+  // the legend must survive on the empty state, or the hidden series could
+  // never be brought back from the UI.
+  const { adapter, container, restore } = setup();
+  try {
+    const visibility = new Map([['الف', false], ['ب', false]]);
+    const handle = adapter.render(container, {
+      type: 'line',
+      data: { rows: [], seriesIds: ['الف', 'ب'] },
+      legend: { visible: true },
+      theme: 'light',
+      seriesVisibility: visibility,
+    }, { onToggle: () => {}, onClick: () => {} });
+
+    let legend = null;
+    const walk = (element) => {
+      for (const child of element.children ?? []) {
+        if (child.className === 'pey-vis-legend') {
+          legend = child;
+        }
+        walk(child);
+      }
+    };
+    walk(container);
+
+    assert.notEqual(legend, null, 'the legend stays on the empty state');
+    const boxes = (legend.children ?? []).map((item) => (item.children ?? []).find((node) => String(node.tagName ?? '').toLowerCase() === 'input'));
+    assert.deepEqual(boxes.map((box) => box.checked), [false, false], 'both hidden series stay toggleable');
+    handle.release();
+  } finally {
+    restore();
+  }
+});
+
 test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_given', () => {
   // P1 regression: the visibility state rides on the spec — a legend rebuilt
   // from a state that lives nowhere renders every series as checked and
