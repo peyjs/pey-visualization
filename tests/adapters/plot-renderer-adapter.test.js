@@ -104,6 +104,67 @@ test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', (
 
 import { runRendererContractSuite } from '../renderer-contract.js';
 
+test('should_stamp_each_series_leaf_with_its_own_series_and_report_clicks_identifying_it', () => {
+  // Round-6 P1: Plot's next() returns a group per mark whose clickable
+  // children are leaves — the stamp must reach the leaves, and each series
+  // leaf must carry its OWN series (recovered from its stroke/fill via the
+  // color scale), not the first series of the data.
+  const { adapter, container, restore } = setup();
+  try {
+    let clicked = null;
+    const handle = adapter.render(container, {
+      type: 'line',
+      data: { rows: ROWS, seriesIds: ['الف', 'ب'] },
+      legend: { visible: false },
+      theme: 'light',
+    }, { onToggle: () => {}, onClick: (report) => { clicked = report; } });
+
+    const svg = (container.children ?? []).find((child) => child.tagName === 'svg')
+      ?? deepFind(container, (node) => node.tagName === 'svg');
+    assert.notEqual(svg, undefined, 'the plot rendered');
+
+    const leaves = [];
+    const walk = (element) => {
+      const children = element.children ?? [];
+      if (!Array.isArray(children) || children.length === 0) {
+        leaves.push(element);
+        return;
+      }
+      children.forEach(walk);
+    };
+    walk(svg);
+
+    const stamped = leaves.filter((leaf) => leaf.__vis !== undefined);
+    const seriesIds = [...new Set(stamped.map((leaf) => leaf.__vis.seriesId))];
+    assert.ok(seriesIds.includes('الف') && seriesIds.includes('ب'),
+      `each series leaf carries its own series (stamped: ${JSON.stringify([...new Set(stamped.map((leaf) => leaf.__vis.seriesId))])})`);
+
+    const target = stamped.find((leaf) => leaf.__vis.seriesId === 'ب');
+    const listenerCall = (event) => event;
+    svg.listeners?.click?.(listenerCall({ target }));
+    // The delegated listener is registered on the svg through addEventListener;
+    // dispatch through the shim instead.
+    svg.dispatchEvent({ type: 'click', target });
+    assert.equal(clicked.seriesId, 'ب', 'the click report names the clicked series');
+    handle.release();
+  } finally {
+    restore();
+  }
+});
+
+function deepFind(element, predicate) {
+  if (predicate(element)) {
+    return element;
+  }
+  for (const child of element.children ?? []) {
+    const found = deepFind(child, predicate);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
 test('should_keep_the_legend_when_only_one_series_removes_and_it_is_the_hidden_one', () => {
   // A single remaining series that is itself hidden filters all rows into
   // the empty state — the unchecked checkbox must still render, or the

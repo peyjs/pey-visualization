@@ -31,11 +31,11 @@ export function buildSeriesMarks(spec) {
       ].filter(Boolean);
     case 'area':
       return [
-        Plot.areaY(rows, {
+        Plot.areaY(rows, bindDatum({
           x: 'x',
           y: 'y',
           fill: seriesField,
-        }),
+        }, rows, false)),
         tipMark(rows),
       ].filter(Boolean);
     case 'stackedArea':
