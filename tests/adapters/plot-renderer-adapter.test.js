@@ -104,6 +104,40 @@ test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', (
 
 import { runRendererContractSuite } from '../renderer-contract.js';
 
+test('should_keep_the_legend_when_only_one_series_removes_and_it_is_the_hidden_one', () => {
+  // A single remaining series that is itself hidden filters all rows into
+  // the empty state — the unchecked checkbox must still render, or the
+  // series could never be brought back.
+  const { adapter, container, restore } = setup();
+  try {
+    const visibility = new Map([['الف', false]]);
+    adapter.render(container, {
+      type: 'line',
+      data: { rows: [], seriesIds: ['الف'] },
+      legend: { visible: true },
+      theme: 'light',
+      seriesVisibility: visibility,
+    }, { onToggle: () => {}, onClick: () => {} });
+
+    let legend = null;
+    const walk = (element) => {
+      for (const child of element.children ?? []) {
+        if (child.className === 'pey-vis-legend') {
+          legend = child;
+        }
+        walk(child);
+      }
+    };
+    walk(container);
+
+    assert.notEqual(legend, null, 'the legend survives the single-hidden-series dead end');
+    const checkbox = (legend.children ?? []).flatMap((item) => (item.children ?? []).filter((node) => String(node.tagName ?? '').toLowerCase() === 'input'))[0];
+    assert.equal(checkbox.checked, false, 'the hidden series stays toggleable');
+  } finally {
+    restore();
+  }
+});
+
 test('should_keep_the_legend_on_the_empty_state_when_every_series_is_hidden', () => {
   // Hiding every series filters all rows and the drawing goes empty — but
   // the legend must survive on the empty state, or the hidden series could

@@ -19,7 +19,12 @@ import { applyWrapperStyle } from './plot-empty-state.js';
  */
 export function renderLegend(container, spec, style, onToggle, seriesVisibility = null, documentOf = () => globalThis.document) {
   const seriesIds = spec.data?.seriesIds ?? [];
-  if (spec.legend?.visible === false || seriesIds.length < 2) {
+  // The legend renders for a multi-series chart — and also when at least
+  // one series is currently HIDDEN: with a single visible series whose
+  // siblings are hidden (or all rows filtered out), the unchecked checkbox
+  // is the only way the hidden series can ever come back.
+  const hasHidden = seriesIds.some((seriesId) => seriesVisibility?.get(seriesId) === false);
+  if (spec.legend?.visible === false || (seriesIds.length < 2 && !hasHidden)) {
     return false;
   }
   const legend = documentOf().createElement('div');
