@@ -99,8 +99,12 @@ test('should_reject_non_row_shapes_when_series_values_are_not_scalar', async () 
   assert.throws(() => validateData('line', { nope: 1 }), (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'not-a-row-list');
   assert.throws(
     () => validateData('line', [{ x: 1, y: 2, series: { nested: true } }]),
-    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'missing-channel',
+    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
   );
+  // A Date is a documented channel value (the temporal channels of the
+  // series family) — validation passes it through and the render infers
+  // the time scale from the data itself.
+  assert.deepEqual(validateData('timeSeries', [{ x: new Date('2024-01-01'), y: 2 }]).rows, [{ x: new Date('2024-01-01'), y: 2, series: null }]);
 });
 
 test('should_accept_empty_data_as_the_empty_state_when_every_type_is_checked', () => {

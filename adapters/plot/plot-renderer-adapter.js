@@ -163,17 +163,29 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
   drawPlot();
 
   let lastWidth = plotSize(spec, container).width;
-  const releases = [watchResize(container, () => {
-    const width = plotSize(spec, container).width;
-    if (width !== lastWidth) {
-      lastWidth = width;
-      try {
-        drawPlot();
-      } catch {
-        // A failed resize redraw keeps the previous drawing.
+  const releases = [
+    watchResize(container, () => {
+      const width = plotSize(spec, container).width;
+      if (width !== lastWidth) {
+        lastWidth = width;
+        try {
+          drawPlot();
+        } catch {
+          // A failed resize redraw keeps the previous drawing.
+        }
       }
-    }
-  })];
+    }),
+    // The delegated click listener counts as a kept resource too: release()
+    // frees "everything the render kept" (its own contract) — without it, a
+    // drawing left on an unhealthy container by remove()'s guarded cleanup
+    // would keep listening and publishing events for a dead chartId.
+    () => {
+      if (releaseClick) {
+        releaseClick();
+        releaseClick = null;
+      }
+    },
+  ];
 
   container.append(wrapper);
   // Legend placement: top/left render before the drawing, bottom/right

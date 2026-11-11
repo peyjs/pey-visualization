@@ -13,6 +13,15 @@ import { createDomShim, createShimContainer } from '../dom-shim.js';
 // container); the per-test setup still overrides globalThis.document.
 const shimDocument = createDomShim();
 
+function findSvg(element) {
+  for (const child of element.children ?? []) {
+    if (child.tagName === 'svg') return child;
+    const found = findSvg(child);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
 function setup() {
   const document = createDomShim();
   // The title/caption/legend/empty-state helpers read the global document;
@@ -315,6 +324,31 @@ test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_give
   }
 });
 
+
+test('should_stop_reporting_clicks_after_release_when_the_drawing_stays_on_the_container', () => {
+  // release() frees "everything the render kept" — the delegated click
+  // listener included: a drawing left on an unhealthy container by the
+  // remove() guarded cleanup must not keep reporting events for a dead
+  // chartId (round-9 P2-1).
+  const { adapter, container, restore } = setup();
+  try {
+    let clicks = 0;
+    const handle = adapter.render(container, {
+      type: 'line',
+      data: { rows: ROWS, seriesIds: null },
+      legend: { visible: false },
+      theme: 'light',
+    }, { onToggle: () => {}, onClick: () => { clicks += 1; } });
+    const svg = findSvg(container);
+    svg.dispatchEvent({ type: 'click', target: svg });
+    assert.equal(clicks, 1, 'clicks report while the chart lives');
+    handle.release();
+    svg.dispatchEvent({ type: 'click', target: svg });
+    assert.equal(clicks, 1, 'the released chart is deaf');
+  } finally {
+    restore();
+  }
+});
 
 test('should_render_a_real_grouped_bar_when_faceted_marks_walk_their_groups', () => {
   // Smoke gate for the faceted path: Plot's fx/fy groups call

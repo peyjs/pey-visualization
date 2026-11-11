@@ -15,7 +15,6 @@ export function buildSeriesMarks(spec) {
   const rows = spec.data.rows;
   const hasSeries = rows.some((row) => row.series != null);
   const seriesField = hasSeries ? 'series' : undefined;
-  const isTemporal = rows.length > 0 && rows.every((row) => row.x instanceof Date);
 
   switch (spec.type) {
     case 'line':
