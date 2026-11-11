@@ -101,10 +101,31 @@ test('should_reject_non_row_shapes_when_series_values_are_not_scalar', async () 
     () => validateData('line', [{ x: 1, y: 2, series: { nested: true } }]),
     (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
   );
-  // A Date is a documented channel value (the temporal channels of the
-  // series family) — validation passes it through and the render infers
-  // the time scale from the data itself.
+  // A Date is a documented channel value ONLY on the series family's x
+  // (the temporal channel): as a category, key or series id it is an
+  // object identity and must refuse — series identity keyed on a Date
+  // would break on every update with fresh instances.
   assert.deepEqual(validateData('timeSeries', [{ x: new Date('2024-01-01'), y: 2 }]).rows, [{ x: new Date('2024-01-01'), y: 2, series: null }]);
+  assert.throws(
+    () => validateData('line', [{ x: 1, y: 2, series: new Date('2024-01-01') }]),
+    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
+  );
+  assert.throws(
+    () => validateData('bar', [{ x: new Date('2024-01-01'), y: 2 }]),
+    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
+  );
+  assert.throws(
+    () => validateData('heatmap', [{ x: 'a', y: new Date('2024-01-01'), value: 1 }]),
+    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
+  );
+  // A boolean is present-but-unusable too — the same honest reason, never
+  // "missing".
+  assert.throws(
+    () => validateData('line', [{ x: true, y: 2 }]),
+    (error) => error.code === 'VIS_INVALID_DATA'
+      && error.detail.reason === 'unsupported-channel-type'
+      && error.message.includes('must be a scalar or a Date'),
+  );
 });
 
 test('should_accept_empty_data_as_the_empty_state_when_every_type_is_checked', () => {

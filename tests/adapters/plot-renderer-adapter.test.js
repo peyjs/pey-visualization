@@ -325,6 +325,40 @@ test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_give
 });
 
 
+test('should_keep_the_previous_drawing_when_a_resize_redraw_fails', () => {
+  // The failed-resize contract: the previous drawing stays on the page —
+  // the plot is BUILT before the wrapper is cleared, so a fault anywhere in
+  // the rebuild cannot empty the chart (round-10 P2-3; the old code cleared
+  // first, so a failed redraw left an empty chart).
+  let observerCallback = null;
+  const previousRO = globalThis.ResizeObserver;
+  const previousRAF = globalThis.requestAnimationFrame;
+  globalThis.ResizeObserver = class {
+    constructor(cb) { observerCallback = cb; }
+    observe() {}
+    disconnect() {}
+  };
+  globalThis.requestAnimationFrame = (fn) => { fn(); return 0; };
+  const { adapter, container, restore } = setup();
+  try {
+    const spec = { type: 'line', data: { rows: ROWS, seriesIds: null }, legend: { visible: false }, theme: 'light' };
+    const handle = adapter.render(container, spec, { onToggle: () => {}, onClick: () => {} });
+    const svg = findSvg(container);
+
+    // A redraw fault (the marks builder trips on the mutated rows): the
+    // old drawing must survive.
+    spec.data = { rows: 'nope' };
+    observerCallback();
+    assert.equal(findSvg(container), svg, 'the previous drawing is still on the page');
+    assert.ok(findSvg(container).children.length > 0, 'it is not an empty husk');
+    handle.release();
+  } finally {
+    globalThis.ResizeObserver = previousRO;
+    globalThis.requestAnimationFrame = previousRAF;
+    restore();
+  }
+});
+
 test('should_stop_reporting_clicks_after_release_when_the_drawing_stays_on_the_container', () => {
   // release() frees "everything the render kept" — the delegated click
   // listener included: a drawing left on an unhealthy container by the

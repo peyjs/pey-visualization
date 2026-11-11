@@ -46,7 +46,7 @@ adapters/plot/plot-marks/*.js   — ترجمه spec به markهای Plot
 
 | خانواده | انواع | داده (فیلدهای نام‌گذاری‌شدنی) |
 |---|---|---|
-| series | `line`، `timeSeries`، `area`، `stackedArea` | `x` (اسکالر یا `Date`؛ برای timeSeries تاریخ)، `y` (عدد)، `series` اختیاری — الزامی برای `stackedArea` |
+| series | `line`، `timeSeries`، `area`، `stackedArea` | `x` (اسکالر، یا `Date` فقط روی همین کانال زمانی)، `y` (عدد)، `series` اختیاری — الزامی برای `stackedArea` |
 | bar | `bar`، `groupedBar`، `stackedBar` | `x` (دسته)، `y` (عدد)، `series` اختیاری — الزامی برای گروهی/انباشته |
 | point | `scatter`، `dot`، `bubble` | `x`، `y` و برای bubble `size` عددی |
 | distribution | `histogram`، `density`، `boxPlot` | histogram `x` عددی؛ density `x` و `y` عددی؛ boxPlot `x` دسته و `y` عدد |

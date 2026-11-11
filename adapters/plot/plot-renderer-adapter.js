@@ -131,11 +131,6 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
   // Redraws only the drawing itself — the wrapper, title, caption and
   // legend stay put — so resize bursts are cheap and idempotent.
   const drawPlot = () => {
-    if (releaseClick) {
-      releaseClick();
-      releaseClick = null;
-    }
-    wrapper.replaceChildren();
     const { width, height } = plotSize(spec, container);
     const options = {
       marks: familyBuilder.marks(spec),
@@ -156,7 +151,17 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
     if (typeof window === 'undefined' || documentOf() !== window.document) {
       options.document = documentOf();
     }
+    // Build the plot FIRST: a throw inside Plot.plot (library fault, low
+    // memory, ...) must leave the PREVIOUS drawing on the page — the failed
+    // resize redraw really does keep it, matching the update path's
+    // rollback contract (the old code cleared the wrapper before building,
+    // so a failed redraw emptied the chart).
     const plot = Plot.plot(options);
+    if (releaseClick) {
+      releaseClick();
+      releaseClick = null;
+    }
+    wrapper.replaceChildren();
     releaseClick = attachClick(plot, handlers.onClick);
     wrapper.append(plot);
   };
