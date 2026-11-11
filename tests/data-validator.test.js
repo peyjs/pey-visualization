@@ -128,6 +128,42 @@ test('should_reject_non_row_shapes_when_series_values_are_not_scalar', async () 
   );
 });
 
+test('should_accept_a_null_series_as_no_series_when_the_optional_channel_is_checked', () => {
+  // Round-11 regression: an explicit null and an absent field are two
+  // spellings of the same intent — the validator's own normalized output
+  // uses `series: null` for exactly this shape, so the input null must be
+  // accepted, not reported as a missing channel.
+  const withNull = validateData('line', [{ x: 1, y: 2, series: null }]);
+  assert.deepEqual(withNull.rows, [{ x: 1, y: 2, series: null }]);
+  const withoutField = validateData('line', [{ x: 1, y: 2 }]);
+  assert.deepEqual(withoutField, withNull, 'null and absent behave identically');
+  // But the SERIES-REQUIRED family still refuses a null series.
+  assert.throws(
+    () => validateData('stackedArea', [{ x: 1, y: 2, series: null }]),
+    (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'missing-channel',
+  );
+});
+
+test('should_reject_function_bigint_and_symbol_channels_when_the_whitelist_is_checked', () => {
+  // Round-11 regression: the scalar guard is a WHITELIST (number/string,
+  // plus a Date on the temporal channel). The old blacklist let these
+  // three types through — some rendered silently wrong on the real
+  // adapter, one died inside Plot.plot as a raw VIS_RENDER_FAILED cause
+  // instead of a named data error.
+  for (const value of [() => 1, 1n, Symbol('s')]) {
+    assert.throws(
+      () => validateData('line', [{ x: value, y: 2 }]),
+      (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
+      typeof value,
+    );
+    assert.throws(
+      () => validateData('line', [{ x: 1, y: 2, series: value }]),
+      (error) => error.code === 'VIS_INVALID_DATA' && error.detail.reason === 'unsupported-channel-type',
+      typeof value,
+    );
+  }
+});
+
 test('should_accept_empty_data_as_the_empty_state_when_every_type_is_checked', () => {
   for (const type of ['line', 'timeSeries', 'area', 'stackedArea', 'bar', 'groupedBar', 'stackedBar', 'scatter', 'bubble', 'dot', 'histogram', 'boxPlot', 'density', 'heatmap']) {
     const spec = validateData(type, []);

@@ -325,14 +325,26 @@ test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_give
 });
 
 
-test('should_keep_the_previous_drawing_when_a_resize_redraw_fails', () => {
-  // The failed-resize contract: the previous drawing stays on the page —
-  // the plot is BUILT before the wrapper is cleared, so a fault anywhere in
-  // the rebuild cannot empty the chart (round-10 P2-3; the old code cleared
-  // first, so a failed redraw left an empty chart).
-  let observerCallback = null;
+function countSvg(element) {
+  let count = 0;
+  for (const child of element.children ?? []) {
+    if (child.tagName === 'svg') count += 1;
+    count += countSvg(child);
+  }
+  return count;
+}
+
+// Common body of the failed-redraw tests (round-11 rewrite): the fault is
+// injected AFTER a real width change so the resize path actually runs, and
+// each fault site is tested on its own. The first version of this test was
+// VACUOUS twice over: it never changed the container width (so drawPlot was
+// never called) and its injected fault fired inside the options build —
+// which the OLD pre-round-10 code also evaluated before clearing, so the
+// test stayed green on the bug it was meant to guard.
+function assertRedrawFaultKeepsDrawing(injectFault) {
   const previousRO = globalThis.ResizeObserver;
   const previousRAF = globalThis.requestAnimationFrame;
+  let observerCallback = null;
   globalThis.ResizeObserver = class {
     constructor(cb) { observerCallback = cb; }
     observe() {}
@@ -344,13 +356,77 @@ test('should_keep_the_previous_drawing_when_a_resize_redraw_fails', () => {
     const spec = { type: 'line', data: { rows: ROWS, seriesIds: null }, legend: { visible: false }, theme: 'light' };
     const handle = adapter.render(container, spec, { onToggle: () => {}, onClick: () => {} });
     const svg = findSvg(container);
+    assert.ok(svg, 'the initial render drew a plot');
 
-    // A redraw fault (the marks builder trips on the mutated rows): the
-    // old drawing must survive.
-    spec.data = { rows: 'nope' };
+    // A REAL width change (800 → 400) makes the redraw gate fire; without
+    // it the callback runs but drawPlot never does.
+    container.clientWidth = 400;
+    injectFault(spec);
     observerCallback();
     assert.equal(findSvg(container), svg, 'the previous drawing is still on the page');
     assert.ok(findSvg(container).children.length > 0, 'it is not an empty husk');
+    assert.equal(countSvg(container), 1, 'exactly one svg — the failed redraw added none');
+    handle.release();
+  } finally {
+    globalThis.ResizeObserver = previousRO;
+    globalThis.requestAnimationFrame = previousRAF;
+    restore();
+  }
+}
+
+test('should_keep_the_previous_drawing_when_a_resize_redraw_fails_inside_plot', () => {
+  // The failed-resize contract (round-10 P2-3, guarded by a REAL test since
+  // round 11): the plot is BUILT before the wrapper is cleared, so a throw
+  // inside Plot.plot itself — a library fault — cannot empty the chart.
+  // The domain fault reaches Plot.plot through the axes pass-through.
+  assertRedrawFaultKeepsDrawing((spec) => {
+    spec.axes = { x: { domain: true } };
+  });
+});
+
+test('should_keep_the_previous_drawing_when_a_resize_redraw_fails_in_marks', () => {
+  // Same contract, fault on the OTHER side of the build/clear boundary: the
+  // marks builder trips on a broken data payload. The old pre-round-10
+  // order cleared the wrapper BEFORE building the options, so this fault
+  // emptied the chart there — only the fixed order survives it.
+  assertRedrawFaultKeepsDrawing((spec) => {
+    spec.data = null;
+  });
+});
+
+test('should_recover_to_one_drawing_with_a_live_click_listener_after_a_failed_redraw', () => {
+  // After a failed redraw the chart must keep working: a subsequent good
+  // redraw yields EXACTLY one svg and the fresh click listener reports for
+  // the new drawing (behavior the fixed code already had — now locked).
+  const previousRO = globalThis.ResizeObserver;
+  const previousRAF = globalThis.requestAnimationFrame;
+  let observerCallback = null;
+  globalThis.ResizeObserver = class {
+    constructor(cb) { observerCallback = cb; }
+    observe() {}
+    disconnect() {}
+  };
+  globalThis.requestAnimationFrame = (fn) => { fn(); return 0; };
+  const { adapter, container, restore } = setup();
+  try {
+    const spec = { type: 'line', data: { rows: ROWS, seriesIds: null }, legend: { visible: false }, theme: 'light' };
+    let clicks = 0;
+    const handle = adapter.render(container, spec, { onToggle: () => {}, onClick: () => { clicks += 1; } });
+    const svg = findSvg(container);
+
+    container.clientWidth = 400;
+    spec.data = null;
+    observerCallback();
+    spec.data = { rows: ROWS, seriesIds: null };
+    // A second width change: the redraw gate is `width !== lastWidth`, and
+    // the failed redraw already recorded 400 as the last width.
+    container.clientWidth = 500;
+    observerCallback();
+
+    assert.equal(countSvg(container), 1, 'the recovered redraw leaves exactly one drawing');
+    assert.notEqual(findSvg(container), svg, 'the recovered drawing is a fresh svg');
+    findSvg(container).dispatchEvent({ type: 'click', target: null });
+    assert.equal(clicks, 1, 'the new drawing has a live click listener');
     handle.release();
   } finally {
     globalThis.ResizeObserver = previousRO;

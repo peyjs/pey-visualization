@@ -31,6 +31,33 @@ test('should_carry_the_channel_field_names_when_the_host_names_its_columns', () 
   assert.deepEqual(channels, { x: 'day', y: 'amount' });
 });
 
+test('should_reject_bad_channel_entries_with_named_reasons_when_the_channels_slice_is_checked', () => {
+  // Round-11 regression: the channels slice validated like every other
+  // options slice. The old code silently DROPPED bad entries, so a mistyped
+  // field name (`serise: 'cat'`) reached the data validator against the
+  // default channel and the host chased a misleading data-side error.
+  assert.throws(
+    () => normalizeOptions({ channels: { series: 42 } }, 'line'),
+    (error) => error.code === 'VIS_INVALID_OPTIONS'
+      && error.detail.reason === 'channel-not-a-string'
+      && error.detail.field === 'channels.series',
+  );
+  assert.throws(
+    () => normalizeOptions({ channels: { y: '' } }, 'line'),
+    (error) => error.code === 'VIS_INVALID_OPTIONS'
+      && error.detail.reason === 'channel-not-a-string'
+      && error.detail.field === 'channels.y',
+  );
+  assert.throws(
+    () => normalizeOptions({ channels: { serise: 'cat' } }, 'line'),
+    (error) => error.code === 'VIS_INVALID_OPTIONS'
+      && error.detail.reason === 'unknown-channel'
+      && error.detail.field === 'channels.serise',
+  );
+  // Valid entries still pass through untouched.
+  assert.deepEqual(normalizeOptions({ channels: { value: 'count' } }, 'heatmap').channels, { value: 'count' });
+});
+
 test('should_normalize_display_slices_when_the_host_supplies_display_options', () => {
   const { spec } = normalizeOptions({
     title: 'فروش ماه',

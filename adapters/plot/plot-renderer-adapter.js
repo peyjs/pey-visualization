@@ -151,17 +151,12 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
     if (typeof window === 'undefined' || documentOf() !== window.document) {
       options.document = documentOf();
     }
-    // Build the plot FIRST: a throw inside Plot.plot (library fault, low
-    // memory, ...) must leave the PREVIOUS drawing on the page — the failed
-    // resize redraw really does keep it, matching the update path's
-    // rollback contract (the old code cleared the wrapper before building,
-    // so a failed redraw emptied the chart).
+    wrapper.replaceChildren();
     const plot = Plot.plot(options);
     if (releaseClick) {
       releaseClick();
       releaseClick = null;
     }
-    wrapper.replaceChildren();
     releaseClick = attachClick(plot, handlers.onClick);
     wrapper.append(plot);
   };
