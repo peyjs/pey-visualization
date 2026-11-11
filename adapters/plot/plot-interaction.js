@@ -70,19 +70,32 @@ function stampTree(nodes, index, rows, perRow, values) {
     // datum i was drawn with. Mapping each drawn color back to the series
     // of the rows carrying it recovers each leaf's series without guessing.
     const colorToSeries = new Map();
+    const ambiguousColors = new Set();
     const channel = Array.isArray(values?.stroke) ? values.stroke : (Array.isArray(values?.fill) ? values.fill : null);
     if (channel) {
       for (const datumIndex of index) {
         const row = rows[datumIndex];
         const color = channel[datumIndex];
-        if (row && typeof color === 'string' && row.series != null && !colorToSeries.has(color)) {
+        if (!row || typeof color !== 'string' || row.series == null) {
+          continue;
+        }
+        // A color drawn by two DIFFERENT series (a palette cycled past its
+        // range, or a host palette shorter than the series count) is
+        // ambiguous: its leaves stay UNSTAMPED — wrong identity is worse
+        // than no identity, per this file's own contract.
+        if (colorToSeries.has(color) && colorToSeries.get(color) !== row.series) {
+          ambiguousColors.add(color);
+        }
+        if (!colorToSeries.has(color)) {
           colorToSeries.set(color, row.series);
         }
       }
     }
     for (const leaf of leaves) {
       const color = leaf.getAttribute?.('stroke') ?? leaf.getAttribute?.('fill');
-      const seriesId = typeof color === 'string' ? colorToSeries.get(color) ?? null : null;
+      const seriesId = typeof color === 'string' && !ambiguousColors.has(color)
+        ? colorToSeries.get(color) ?? null
+        : null;
       if (leaf && seriesId !== null) {
         leaf.__vis = { datum: null, seriesId };
       }
@@ -96,11 +109,16 @@ function stampTree(nodes, index, rows, perRow, values) {
  * @returns {Array} Leaves in draw order.
  */
 function leafElements(element) {
-  const children = element?.children ?? [];
-  if (!Array.isArray(children) || children.length === 0) {
+  // List-agnostic: in a real browser `Element.children` is an HTMLCollection,
+  // NOT an array — an Array.isArray check would treat every group as a leaf
+  // and stop the walk at the first mark group (the whole stamping pass went
+  // inert in the browser while the array-backed shim kept it green).
+  const children = element?.children;
+  const list = children && typeof children.length === 'number' ? Array.from(children) : [];
+  if (list.length === 0) {
     return element ? [element] : [];
   }
-  return children.flatMap((child) => leafElements(child));
+  return list.flatMap((child) => leafElements(child));
 }
 
 /**

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tipMark } from '../../adapters/plot/plot-marks/tips.js';
 import { createPlotRendererAdapter } from '../../adapters/plot/plot-renderer-adapter.js';
+import { bindDatum } from '../../adapters/plot/plot-interaction.js';
 import { createDomShim, createShimContainer } from '../dom-shim.js';
 
 // A shared shim for the contract suite (each render also gets a fresh
@@ -104,7 +105,7 @@ test('should_skip_the_series_segment_in_the_title_when_the_row_has_no_series', (
 
 import { runRendererContractSuite } from '../renderer-contract.js';
 
-test('should_stamp_each_series_leaf_with_its_own_series_and_report_clicks_identifying_it', () => {
+test('should_stamp_each_series_leaf_with_its_own_series_when_a_series_mark_renders', () => {
   // Round-6 P1: Plot's next() returns a group per mark whose clickable
   // children are leaves — the stamp must reach the leaves, and each series
   // leaf must carry its OWN series (recovered from its stroke/fill via the
@@ -150,6 +151,51 @@ test('should_stamp_each_series_leaf_with_its_own_series_and_report_clicks_identi
   } finally {
     restore();
   }
+});
+
+test('should_stamp_leaves_when_children_is_an_htmlcollection_like_object', () => {
+  // Browser fidelity: Element.children is an HTMLCollection, NOT an array —
+  // an Array.isArray traversal would stop at the first group and go inert
+  // in the browser while the array-backed shim stayed green.
+  const group = shimDocument.createElement('g');
+  const leafA = shimDocument.createElement('path');
+  leafA.setAttribute('stroke', '#4269d0');
+  const leafB = shimDocument.createElement('path');
+  leafB.setAttribute('stroke', '#efb118');
+  // HTMLCollection-like: non-array, numeric length, iterable.
+  const collection = { length: 2, 0: leafA, 1: leafB, [Symbol.iterator]: Array.prototype[Symbol.iterator] };
+  Object.defineProperty(group, 'children', { value: collection });
+
+  const rows = [
+    { x: 1, y: 2, series: 'الف' },
+    { x: 2, y: 4, series: 'ب' },
+  ];
+  const mark = bindDatum({ x: 'x', y: 'y', stroke: 'series' }, rows, false);
+  mark.render([0, 1], {}, { stroke: ['#4269d0', '#efb118'] }, {}, {}, () => group);
+
+  assert.equal(leafA.__vis?.seriesId, 'الف');
+  assert.equal(leafB.__vis?.seriesId, 'ب');
+});
+
+test('should_leave_leaves_unstamped_when_two_series_share_a_color', () => {
+  // A color drawn by two DIFFERENT series (cycled or short host palette) is
+  // ambiguous: wrong identity is worse than no identity.
+  const group = shimDocument.createElement('g');
+  const leafA = shimDocument.createElement('path');
+  leafA.setAttribute('stroke', '#4269d0');
+  const leafB = shimDocument.createElement('path');
+  leafB.setAttribute('stroke', '#4269d0');
+  group.append(leafA, leafB);
+
+  const rows = [
+    { x: 1, y: 2, series: 'الف' },
+    { x: 2, y: 4, series: 'ب' },
+  ];
+  const mark = bindDatum({ x: 'x', y: 'y', stroke: 'series' }, rows, false);
+  mark.render([0, 1], {}, { stroke: ['#4269d0', '#4269d0'] }, {}, {}, () => group);
+
+  assert.equal(leafA.__vis, undefined, 'the ambiguous leaf stays unstamped');
+  assert.equal(leafB.__vis, undefined, 'no wrong identity is invented');
 });
 
 function deepFind(element, predicate) {
