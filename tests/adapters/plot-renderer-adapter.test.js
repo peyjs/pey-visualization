@@ -141,10 +141,8 @@ test('should_stamp_each_series_leaf_with_its_own_series_when_a_series_mark_rende
       `each series leaf carries its own series (stamped: ${JSON.stringify([...new Set(stamped.map((leaf) => leaf.__vis.seriesId))])})`);
 
     const target = stamped.find((leaf) => leaf.__vis.seriesId === 'ب');
-    const listenerCall = (event) => event;
-    svg.listeners?.click?.(listenerCall({ target }));
     // The delegated listener is registered on the svg through addEventListener;
-    // dispatch through the shim instead.
+    // dispatch through the shim instead — one dispatch, one invocation.
     svg.dispatchEvent({ type: 'click', target });
     assert.equal(clicked.seriesId, 'ب', 'the click report names the clicked series');
     handle.release();
@@ -317,5 +315,64 @@ test('should_render_hidden_series_as_unchecked_when_the_visibility_state_is_give
   }
 });
 
+
+test('should_render_a_real_grouped_bar_when_faceted_marks_walk_their_groups', () => {
+  // Smoke gate for the faceted path: Plot's fx/fy groups call
+  // node.hasAttribute while upgrading their ARIA — a shim without it hid
+  // this whole chart family from real rendering (round-8 P2-3).
+  const { adapter, container, restore } = setup();
+  try {
+    const handle = adapter.render(container, {
+      type: 'groupedBar',
+      data: {
+        rows: [
+          { x: 'دسته۱', y: 2, series: 'الف' },
+          { x: 'دسته۱', y: 3, series: 'ب' },
+          { x: 'دسته۲', y: 1, series: 'الف' },
+        ],
+        seriesIds: ['الف', 'ب'],
+      },
+      legend: { visible: false },
+      theme: 'light',
+    }, { onToggle: () => {}, onClick: () => {} });
+
+    assert.ok(container.children.length > 0, 'the faceted SVG built');
+    handle.release();
+    // Release frees only the kept resources — the drawing stays on the
+    // container (the contract: the container is cleared by the next render
+    // or by the service on remove/deactivate).
+    assert.ok(container.children.length > 0, 'release does not wipe the chart');
+  } finally {
+    restore();
+  }
+});
+
+test('should_render_a_real_heatmap_when_the_color_legend_walks_the_dom', () => {
+  // Smoke gate for the color-legend path: the heatmap's { color: { legend:
+  // true } } hint drives d3-selection's style.removeProperty — a shim
+  // without it hid this whole chart family from real rendering (round-8
+  // P2-3).
+  const { adapter, container, restore } = setup();
+  try {
+    const handle = adapter.render(container, {
+      type: 'heatmap',
+      data: { rows: [
+        { x: 'ستون۱', y: 'ردیف۱', value: 1 },
+        { x: 'ستون۲', y: 'ردیف۲', value: 5 },
+      ] },
+      legend: { visible: false },
+      theme: 'light',
+    }, { onToggle: () => {}, onClick: () => {} });
+
+    assert.ok(container.children.length > 0, 'the heatmap SVG built');
+    handle.release();
+    // Release frees only the kept resources — the drawing stays on the
+    // container (the contract: the container is cleared by the next render
+    // or by the service on remove/deactivate).
+    assert.ok(container.children.length > 0, 'release does not wipe the chart');
+  } finally {
+    restore();
+  }
+});
 
 runRendererContractSuite('plot-adapter', () => createPlotRendererAdapter({ document: shimDocument }), () => createShimContainer(shimDocument));

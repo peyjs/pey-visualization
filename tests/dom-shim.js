@@ -17,7 +17,11 @@ function makeElement(document, tagName, ns = null) {
     parentNode: null,
     attributes: {},
     dataset: {},
-    style: { setProperty: () => {} },
+    style: {
+      setProperty: () => {},
+      // Observable Plot's color legend (d3-selection) calls removeProperty.
+      removeProperty: () => {},
+    },
     className: '',
     dir: '',
     clientWidth: 800,
@@ -55,6 +59,11 @@ function makeElement(document, tagName, ns = null) {
     },
     getAttribute(name) {
       return element.attributes[name] ?? null;
+    },
+    // Observable Plot's faceted marks (groupedBar's fx/fy groups) probe
+    // existing attributes before upgrading their ARIA.
+    hasAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(element.attributes, name);
     },
     removeAttribute(name) {
       delete element.attributes[name];

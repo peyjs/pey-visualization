@@ -220,6 +220,20 @@ test('should_fail_removing_an_unknown_chart_when_the_id_is_unknown', () => {
   assert.throws(() => service.remove('nope'), (error) => error.code === 'VIS_UNKNOWN_CHART');
 });
 
+test('should_still_remove_the_chart_when_the_host_container_cannot_be_cleared', () => {
+  // An unhealthy host container must not wedge removal (the same policy
+  // deactivate's sweep applies): no raw error crosses the boundary, and the
+  // entry leaves the store — a released chart whose remove() kept throwing
+  // would be stuck half-deleted forever.
+  const { service } = createService();
+  const container = createFakeContainer();
+  const chart = service.create({ container, type: 'line', data: { rows: LINE_ROWS }, options: {} });
+  container.replaceChildren = () => { throw new TypeError('detached host container'); };
+
+  assert.equal(service.remove(chart.id).ok, true, 'the removal completes without a raw error');
+  assert.throws(() => service.update(chart.id, { data: { rows: [] } }), (error) => error.code === 'VIS_UNKNOWN_CHART', 'the entry left the store');
+});
+
 // --- interaction events -----------------------------------------------------
 
 test('should_relay_series_toggles_and_keep_the_choice_across_updates_when_the_legend_toggles', () => {
