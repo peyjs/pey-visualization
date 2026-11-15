@@ -39,6 +39,17 @@ test('should_build_bar_and_tooltip_marks_when_type_and_orientation_vary', () => 
   assert.equal(buildBarMarks(spec('stackedBar', xySeries)).length, 2);
 });
 
+test('should_build_horizontal_marks_for_every_bar_family_type_when_orientation_is_horizontal', () => {
+  // The horizontal path exists for the whole bar family (x carries the
+  // value, y the category) — the service's bar-only orientation guard just
+  // used to make it unreachable for grouped/stacked.
+  for (const type of ['bar', 'groupedBar', 'stackedBar']) {
+    const horizontal = buildBarMarks(spec(type, xySeries, { orientation: 'horizontal' }));
+    assert.equal(horizontal[0].channels.x.value, 'y', type);
+    assert.equal(horizontal[0].channels.y.value, 'x', type);
+  }
+});
+
 test('should_build_point_marks_with_a_size_channel_only_when_type_is_bubble', () => {
   const scatter = buildPointMarks(spec('scatter', xy));
   const bubble = buildPointMarks(spec('bubble', [{ x: 1, y: 2, size: 9 }]));

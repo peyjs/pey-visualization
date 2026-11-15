@@ -1,60 +1,13 @@
-# تاریخچه نسخه‌های pey.visualization
+# Changelog
 
-## [1.0.0] - 1405-08-13
+## [1.0.0] - 1405-08-24
 
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۹، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی یازدهم:
+### Added
 
-- **رفع دور یازده — چهار درزِ اعتبارسنجی و یک آزمون پوچ:** گارد اسکالر کانال‌ها به **whitelist** تبدیل شد (number/string، به‌علاوهٔ `Date` فقط روی کانال زمانی) — `function`/`bigint`/`symbol` که از سیاههٔ پیشین می‌گذشتند، بعضی بی‌صدا رندر غلط می‌گرفتند و یکی داخل `Plot.plot` می‌مرد و به‌عنوان cause خامِ `VIS_RENDER_FAILED` گزارش می‌شد (اکنون `unsupported-channel-type` نام‌دار؛ آزمون برای هر سه نوع و مسیر شناسهٔ سری)؛ `series: null` صریح مثل حذفِ فیلد «بدون سری» است — دو بیانِ یک قصد دیگر دو سرنوشت ندارند و شکل نرمالِ خود اعتبارسنج پذیرفته می‌شود (stackedArea الزامی باقی می‌ماند)؛ برش `channels` گزینه‌ها مثل بقیهٔ برش‌ها سخت‌گیر شد — کلید ناشناخته (`unknown-channel`) و مقدار غیررشته‌ای/تهی (`channel-not-a-string`) با `VIS_INVALID_OPTIONS` و field نام‌دار رد می‌شوند، نه حذف بی‌صدایی که میزبان را به خطای گمراه‌کنندهٔ «داده» می‌فرستاد؛ و آزمون رول‌بک `drawPlot` که **دو بار پوچ** بود (هرگز عرض را تغییر نمی‌داد پس redraw اجرا نمی‌شد و خطایش هم در نقطه‌ای می‌خورد که حتی کد معیوبِ پیش از رفع هم پیش از پاک‌سازی می‌خورد) بازنویسی شد — سه آزمون واقعی با تغییر واقعی عرض: خطا در خود `Plot.plot`، خطا در ساخت marks، و بازیابی پس از شکست (دقیقاً یک svg و شنوندهٔ کلیک زنده) (۹۷ آزمون).
-- **رفع P1 — مهر برگ‌ها در مرورگر واقعی:** پیمایش زیردرخت list-agnostic شد — `Element.children` در مرورگر HTMLCollection است نه آرایه و شرط `Array.isArray` کل مهر را در محیط هدف بی‌اثر می‌کرد در حالی که shim آرایه‌ای سبز می‌ماند (آزمون با شیء HTMLCollection-مانند افزوده شد).
-- **رفع P1 — رنگ مبهم = بی‌هویتی، نه هویت اشتباه:** رنگی که دو سریِ متفاوت بکشد (چرخش پاست ۱۰ رنگه یا پالت کوتاه میزبان) مبهم علامت می‌خورد و برگ‌هایش بی‌مهر می‌مانند — نسبت‌دادن سریِ اشتباه به‌جای بی‌هویتی، نقض قرارداد خود فایل بود (آزمون افزوده شد).
-- `VIS_RENDER_FAILED` برای `remove` در مانیفست declare شد؛ نام آزمون مهر به قالب استاندارد رفت و فراخوانی مضاعف listener کلیک در آزمون حذف شد — آزمون هر کلیک را دو بار می‌رساند (یک‌بار مستقیم روی listener، یک‌بار با dispatch رسمی)؛ اکنون فقط ارسال رسمی رویداد باقی است (۸۷ آزمون).
-- رفع دور ده — بستن سه درزِ رفع دور نه: پذیرش `Date` فقط به کانال زمانیِ خودش (x خانوادهٔ series) محدود شد — دسته، کلید و شناسهٔ سری دوباره اسکالرند (یک `Date` به‌عنوان شناسهٔ سری هویت را به مرجع شیء می‌بست و مخفی‌کردن سری را در update خاموش می‌کرد)؛ مقدار `boolean` روی کانال هم با reason صادقانهٔ `unsupported-channel-type` رد می‌شود نه «missing»؛ و `drawPlot` نمودار تازه را **پیش از** پاک‌کردن wrapper می‌سازد — شکست redraw در resize دیگر نقاشی قبلی را خالی نمی‌گذارد (آزمون رول‌بک، آزمون دامنهٔ Date و آزمون reason افزوده شد؛ ۹۲ آزمون).
-- رفع دور نه — قرارداد Date و آزادسازی کامل release: کانال x برای خانوادهٔ series یک `Date` مستند را می‌پذیرد (متن مرجع «برای timeSeries تاریخ» حالا درست است) و مقدار «هست ولی غیرقابل‌استفاده» با reason جداگانهٔ `unsupported-channel-type` و پیام درست گزارش می‌شود، نه «missing-channel»؛ متغیر مردهٔ `isTemporal` حذف شد (Plot مقیاس زمان را از خود داده استنتاج می‌کند و timeSeries hint صریح خودش را دارد)؛ و `release()` آداپتور شنوندهٔ کلیک واگذارشده را هم آزاد می‌کند — با گارد تازهٔ `remove`، نقاشی جامانده روی ظرف سالم‌نشده دیگر شنوندهٔ زنده با chartId مرده نیست (آزمون «رهاشده کر می‌شود» افزوده شد؛ ۹۱ آزمون).
-- رفع دور هشت — پاک‌سازی ظرف در `remove` محافظت شد: ظرف ناسالم میزبان دیگر `TypeError` خام از مرز عبور نمی‌دهد و نمودار در حالت نیمه‌حذف (رهاشده ولی در انبار) گیر نمی‌کند — همان سیاست جاروب `deactivate`، با از‌دست‌رفتن ثبت انبار در هر حال (آزمون رگرسیون).
-- رفع دور هشت — shim آزمون دو API مسیرهای واقعی Plot را گرفت (`hasAttribute` برای گروه‌های facetدار `groupedBar` و `style.removeProperty` برای legend رنگی `heatmap`) و دو آزمون smoke رندر واقعی به‌ازای این دو خانواده افزوده شد — پیش‌تر این دو نوع اصلاً از مسیر آداپتور واقعی رندر نمی‌شدند و در سطح رندر بی‌آزمون بودند (۹۰ آزمون).
-
-
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۹، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی ششم:
-
-- **رفع P1 — شناسایی کلیک واقعی شد:** مهر `__vis` اکنون به عناصر برگِ رسم‌شده می‌رسد (Plot به‌ازای هر mark یک گروه برمی‌گرداند و هدف رویداد در مرورگر همیشه برگ است)؛ برای markهای سری‌به‌سری، سریِ هر برگ از رنگ stroke/fill خودش و از مقادیر مقیاس‌شدهٔ کانال بازسازی می‌شود — نسبت‌دادن کل گروه به سریِ اول حذف شد و برای `area` هم مهر نصب شد (آزمون روی آداپتور واقعی: دو path دو سری، دو seriesId متمایز؛ کلیکِ شبیه‌سازی‌شده سری درست را گزارش می‌کند).
-- سند مرجع گارد تازهٔ راهنما را اعلام می‌کند («یک‌سریِ مخفیِ تنها هم راهنما دارد»)؛ `mapWithCause` مردهٔ صادرشده حذف و ترتیب import در options-slices اصلاح شد (۸۵ آزمون).
-
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۹، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی پنجم:
-
-- کوچک‌شدن داده به یک «سریِ مخفیِ تنها» دیگر راهنما را از صفحه برنمی‌دارد: وقتی دست‌کم یک سری در وضعیت visibility مخفی است، راهنما حتی با یک سری هم رندر می‌شود — چک‌باکس خاموش تنها راه بازگرداندن سری است و گارد دوسری قبلی همین گوشهٔ مرزی را می‌بست (آزمون آداپتور افزوده شد).
-
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۷، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی چهارم:
-
-- **رفع P1:** حالت خالی (از جمله «همهٔ سری‌ها مخفی») اکنون راهنما را هم رندر می‌کند — پیش از این، پنهان‌کردن همهٔ سری‌ها راهنما را برای همیشه از صفحه حذف می‌کرد و هیچ راهی برای بازگرداندن سری‌ها از UI نبود (آزمون آداپتور با چک‌باکس‌های خاموش افزوده شد).
-- **رفع P1:** در مسیر شکست toggle، دستهٔ رسم بازیابیِ درونی پیش از رسمِ برگردانده‌شده آزاد می‌شود — هر toggle شکست‌خورده یک رندر کامل زنده (با ResizeObserver) نشت می‌داد؛ آزمون شمارشگر دسته‌ها افزوده شد.
-- سند مرجع هر چهار جهت راهنما (`top/right/bottom/left`) را اعلام می‌کند — هم‌سو با نرمال‌ساز و آداپتور (۸۳ آزمون).
-
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۷، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی سوم:
-
-- **رفع P1:** وضعیت visibility اکنون روی spec رندر سوار می‌شود (`specForRender`) — پیش از این، کلیدی که رفع دور دوم برای Legend اضافه کرده بود هرگز توسط سرویس پر نمی‌شد و همهٔ چک‌باکس‌های راهنما پس از هر redraw «فعال» رندر می‌شدند؛ سری مخفی عملاً از UI حذف و غیرقابل بازگشت بود. آزمون آداپتورِ راهنمای فعال (چک‌باکس خاموش برای سری مخفی) و آزمون سرویس (spec حامل وضعیت) افزوده شد.
-- **رفع P2:** شکست redraw در toggle دیگر بی‌صدا نیست — رویداد تازهٔ `visualization:render-failed {chartId, operation, code}` (در مانیفست declare شده) شکست ساخت‌یافته را به میزبان اعلام می‌کند، رویداد `series-toggled` فقط پس از redraw موفق منتشر می‌شود و در مسیر شکست، وضعیت برگردانده‌شده دوباره رسم می‌شود تا نقاشی، وضعیت و رویدادها یک روایت باشند (آزمون اختصاصی افزوده شد).
-- سوئیت قرارداد رندرکننده اکنون علیه fake سرویس هم اجرا می‌شود (یک قرارداد، دو پیاده‌سازی) — ۸۱ آزمون.
-
-تثبیت بازبینی (۱۴۰۵-۰۸-۱۵، هنوز در همین نسخهٔ انتشارنیافته) — بازبینی دوم:
-
-- **رفع P0:** قرارداد `release` داخلی صریح شد — آزادسازی منابع فقط، بدون پاک‌کردن ظرف. پیش از آن، هر update موفق یا toggle فوری، پس از رندر جدید، دستهٔ قبلی را آزاد می‌کرد و آداپتور واقعی در release ظرف را خالی می‌کرد — نمودار تازه از صفحه محو می‌شد. پاک‌سازی ظرف اکنون کار رندر بعدی (خودش replaceChildren می‌کند)، `remove` و `deactivate` سرویس است؛ شکست رندر هم در آداپتور خودش DOM ناقص را پاک می‌کند (P2-4) و مسیر roll-back دستهٔ زندهٔ قبلی را نیز آزاد می‌کند (P2-2).
-- **رفع P1:** سوئیت قرارداد مشترک رندرکننده (`tests/renderer-contract.js`) علیه آداپتور واقعی (shim DOM) و fake سرویس اجرا می‌شود و fake اکنون قرارداد واقعی (پاک‌سازی ابتدای رندر، release بدون دست‌زدن به ظرف) را منعکس می‌کند.
-- **رفع P1:** Legend فهرست کامل سری‌ها + وضعیت visibility را می‌گیرد — سری مخفی با چک‌باکس «خاموش» در راهنما می‌ماند و از UI قابل بازگشت است (پیش از این، مخفی‌کردن یک سری از دو سری، Legend را حذف می‌کرد و بازگشت ناممکن بود).
-- شکست redraw در toggle دیگر به‌صورت uncaught exception در صفحهٔ میزبان نمی‌پیچد — rollback درونی است و انتخاب کاربر در شکست برمی‌گردد.
-- `document` تزریقی به همهٔ helperهای DOM (title/caption/empty-state/legend) پاس داده شد — هاست بدون `globalThis.document` هم می‌تواند headless رندر کند و شرط تزریق به Plot با `window.document` درست شد.
-- `THEMES` از options-slices صادر و در `themeOrDefault` مشترک شد؛ آزمون‌های `options-slices` و `tips` (از طریق tipMark خود افزونه) افزوده شدند (۷۴ آزمون).
-
-تثبیت بازبینی نخست (۱۴۰۵-۰۸-۱۵، هنوز در همین نسخهٔ انتشارنیافته):
-
-- **Tooltip واقعی شد (P0):** markهای tip خود Plot با دنبال‌کردن نشانگر به همهٔ خانواده‌های سطری افزوده شد (series/bar/point/heatmap)؛ عنوان از کانال‌های همان ردیف ساخته می‌شود. خانوادهٔ تجمعی (histogram/boxPlot/density) عمداً tooltip ندارد (markها ردیف‌ها را دوباره گروه می‌کنند) و این محدودیت در reference صریح شد.
-- سوییچ سری اکنون بلافاصله رسم را دوباره می‌کند (با roll-back حفظ‌شده)؛ ادعای «مخفی‌سازی فوری» اکنون واقعی است.
-- رفع فاسدشدن state: شکست اعتبارسنجی در `update` دیگر داده/گزینه‌های قبلی را آلوده نمی‌کند (spec تازه پیش از هر تغییر entry ساخته می‌شود) و نمودار پس از شکست قابل‌به‌روزرسانی می‌ماند.
-- رفع نشت DOM: `release()` مسیر حالت خالی هم ظرف را پاک می‌کند (الزام ۸.۳).
-- `remove` ابتدا release می‌کند و بعد از store حذف می‌شود؛ شکست release قابل retry است. roll-back دوم با گارد جدا خطای اصلی را از بین نمی‌برد (`rollbackFailed` در detail).
-- ظرف نمایش فقط با متدهای عنصری (`append`/`replaceChildren`) پذیرفته می‌شود → `VIS_INVALID_CONTAINER` به‌جای خطای داخلی.
-- رویداد `visualization:click` به `visualization:clicked` تغییر نام داد (قاعدهٔ زمانِ گذشتهٔ نام‌گذاری رویداد بنیان) — تغییر قراردادی که در مانیفست و مستندات هم اعمال شد.
-- `watchResize` فریمِ زمان‌بندی‌شدهٔ پیش از release را لغو می‌کند؛ اعلان `releaseClick` پیش از `drawPlot` آمد؛ کامنت مسئولیت plot-legend بالای import رفت.
-- جداسازی: برش‌های نرمال‌سازی گزینه‌ها به `lib/spec/options-slices.js` رفتند (options-normalizer از ~۳۴۶ خط به ~۶۰ خط).
-- آزمون‌ها: نام‌گذاری `should_…_when_…` در همهٔ ۶۵ آزمون؛ `tests/error.test.js` و آزمون رندر واقعی headless آداپتور (`tests/adapters/plot-renderer-adapter.test.js` با shim DOM و تزریق document) افزوده شد؛ `entry.test.js` به `index.test.js` تغییر نام یافت؛ رگرسیون‌های P1 و مسیر toggle فوری آزمون دارند؛ اسکریپت تست به کشف خودکار (`node --test`) تغییر کرد.
-
-انتشار نخست: افزونه مصورسازی داده — ۱۴ نوع نمودار در پنج خانواده (سری‌ها، میله‌ای، نقطه‌ای، توزیع، نقشه حرارتی) با `create`/`update`/`remove` و هویت مستقل هر نمودار؛ داده‌ی خالی حالت خالی می‌دهد نه خطا؛ شکست رسم مجدد به رسم قبلی برمی‌گردد؛ تم روشن/تاریک با پالت اختصاصی میزبان؛ واکنش‌گرایی با ظرف نمایش؛ RTL/LTR با جهت متن مستقل از محورها؛ قالب برچسب محور از میزبان؛ Tooltip، سوییچ سری با راهنما و رویدادهای `visualization:click` / `visualization:series-toggled` فقط با شناسه‌ها. Observable Plot پشت آداپتور رندرکننده‌ی داخلی پنهان است و هیچ نشانی از آن در سرویس نیست. `docs/requirements.md` منبع حقیقت ساخت است.
+- `pey.visualization.service` with `create`, `update` and `remove`: fourteen chart types in five families — series (line, timeSeries, area, stackedArea), bar (bar, groupedBar, stackedBar), point (scatter, dot, bubble), distribution (histogram, boxPlot, density) and heatmap — each an independent chart with its own id, drawn into a host-provided container (an element or a CSS selector, resolved once). Other charts are never disturbed by one chart's removal.
+- The host owns the data and its meaning: rows are validated per family into canonical channels (renamable through `options.channels`), empty data renders an empty state instead of an error, and every invalid input fails with its own structured code (`VIS_UNKNOWN_CHART_TYPE`, `VIS_INVALID_CONTAINER`, `VIS_INVALID_DATA`, `VIS_INVALID_OPTIONS`, `VIS_RENDER_FAILED`, `SERVICE_UNAVAILABLE`). Raw chart-library errors never cross the boundary — they ride in `detail.cause` only.
+- Display options, all optional with good defaults: light/dark theme or a full custom palette, title and caption, a legend with configurable position (top/right/bottom/left), axis labels/domains and host-provided tick formats, RTL/LTR text direction independent of the axes, host fonts and sizes, explicit width/height or aspect ratio (responsive to the container's width by default), margins (zero per side is allowed), and `orientation: vertical|horizontal` across the whole bar family.
+- Interaction: pointer-following tooltips built from each row's own channels (aggregated families — histogram, boxPlot, density — intentionally have none, their marks regroup rows), a legend toggle per series that hides/shows it immediately and survives updates (a hidden series stays in the legend as an unchecked checkbox, so it can always come back), and click reports with series/datum identity (an ambiguous or unattributable element reports no identity rather than a wrong one). Events carry chart/series identity only — `visualization:clicked`, `visualization:series-toggled`, `visualization:render-failed` — never raw payloads.
+- Resilience: a failed update re-renders the previous drawing and shape (and stays updatable afterwards); a failed series toggle reverts the choice, redraws the reverted state and reports the structured failure, so picture, state and legend always tell one story; a failed resize redraw keeps the previous drawing; removal and shutdown release every resource even when the host container is broken.
+- Responsive redraws on container resize (ResizeObserver, coalesced per frame, redrawing the drawing only — title, caption and legend stay put).
+- Observable Plot sits behind an internal renderer adapter (`PlotRendererAdapter`, swappable through the manifest config) and never leaks into the service surface. `docs/requirements.md` is the construction source of truth.

@@ -3,7 +3,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeLegend, normalizeText, normalizeTheme, THEMES } from '../lib/spec/options-slices.js';
+import { THEME_NAMES } from '../lib/constants.js';
+import { normalizeLegend, normalizeText, normalizeTheme } from '../lib/spec/options-slices.js';
 
 test('should_keep_only_known_theme_names_when_normalizing_the_theme', () => {
   assert.deepEqual(normalizeTheme({ theme: 'dark' }), { theme: 'dark' });
@@ -11,7 +12,9 @@ test('should_keep_only_known_theme_names_when_normalizing_the_theme', () => {
 });
 
 test('should_expose_the_theme_names_the_plugin_knows_when_read', () => {
-  assert.deepEqual([...THEMES].sort(), ['dark', 'light']);
+  // Single source of truth: the options validator and the renderer's color
+  // tables both read this set — a new theme means one contract edit.
+  assert.deepEqual([...THEME_NAMES].sort(), ['dark', 'light']);
 });
 
 test('should_normalize_the_legend_slice_when_visibility_and_position_are_given', () => {

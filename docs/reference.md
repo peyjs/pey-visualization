@@ -59,12 +59,13 @@ adapters/plot/plot-marks/*.js   — ترجمه spec به markهای Plot
 همه اختیاری‌اند؛ پیش‌فرض‌ها بدون تنظیم ظاهر مناسب می‌دهند:
 
 - **تم:** `theme: 'light' | 'dark'` یا پالت اختصاصی `palette: { colors, background, textColor, gridColor, axisColor }`. افزونه تم را تشخیص نمی‌دهد؛ با تغییر گزینه دوباره رسم می‌شود.
-- **اندازه:** `width`، `height` یا `aspectRatio` (پیش‌فرض ۱٫۶)؛ بدون عرض صریح، عرض ظرف به کار می‌رود.
+- **اندازه:** `width`، `height` یا `aspectRatio` (پیش‌فرض ۱٫۶)؛ بدون عرض صریح، عرض ظرف به کار می‌رود. `height` و `aspectRatio` هم‌زمان پذیرفته نمی‌شوند (`aspect-ratio-with-height`).
+- **حاشیه:** `margin: { top, right, bottom, left }` — هر ضلع عددی نامنفی (صفر یعنی بدون حاشیه).
 - **عنوان و توضیح:** `title`، `caption` — متنی که میزبان آماده کرده.
 - **راهنما:** `legend: { visible, position: 'top'|'right'|'bottom'|'left' }` — با بیش از یک سری — یا وقتی دست‌کم یک سری مخفی است — نمایش داده می‌شود و سوییچ هر سری را می‌دهد.
 - **محورها:** `axes.x / axes.y` با `label`، `domain: [min, max]` و `tickFormat` (تابع قالب میزبان — افزونه هیچ قالبی از خودش ندارد).
 - **متن:** `text: { direction: 'rtl'|'ltr', font, fontSize }` — جهت متن مستقل از جهت محورها.
-- **جهت میله‌ای:** `orientation: 'vertical'|'horizontal'` (فقط خانواده bar).
+- **جهت میله‌ای:** `orientation: 'vertical'|'horizontal'` — برای کل خانواده bar (`bar`، `groupedBar`، `stackedBar`)؛ روی انواع دیگر با `orientation-not-applicable-to-type` رد می‌شود.
 - **کانال‌ها:** `channels` (بخش ۵).
 
 ## ۷. تعامل و رویدادها

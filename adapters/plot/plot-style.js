@@ -1,6 +1,10 @@
 // Theme and style mapping for the Plot renderer: the host's theme choice
 // or custom palette becomes Plot style options and wrapper styles. Text
-// direction is applied on the wrapper, independent of the axes.
+// direction is applied on the wrapper, independent of the axes. The theme
+// NAME contract lives in lib/constants.js (THEME_NAMES); this table only
+// carries the renderer's colors per name.
+
+import { DEFAULT_THEME, THEME_NAMES } from '../../lib/constants.js';
 
 const THEMES = Object.freeze({
   light: Object.freeze({
@@ -30,7 +34,7 @@ const CATEGORY_COLORS = Object.freeze([
  * @returns {object} `{ background, textColor, gridColor, axisColor, colors }`.
  */
 export function resolvePalette(spec) {
-  const theme = THEMES[spec.theme === 'dark' ? 'dark' : 'light'] ?? THEMES.light;
+  const theme = THEMES[THEME_NAMES.has(spec.theme) ? spec.theme : DEFAULT_THEME] ?? THEMES.light;
   const palette = spec.palette ?? {};
   return {
     background: palette.background ?? theme.background,

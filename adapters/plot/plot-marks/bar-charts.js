@@ -40,12 +40,14 @@ export function buildBarMarks(spec) {
 }
 
 /**
- * Family-level scale hints: horizontal bars swap the numeric axis to x.
+ * Family-level scale hints: horizontal bars swap the numeric axis to x —
+ * for every bar-family type (grouped and stacked bars render horizontally
+ * too; the old bar-only guard left their horizontal hints behind).
  * @param {object} spec Chart spec.
  * @returns {object} Extra Plot scale options.
  */
 export function barScaleHints(spec) {
-  if (spec.type === 'bar' && spec.orientation === 'horizontal') {
+  if (spec.orientation === 'horizontal') {
     return { x: { grid: true }, y: { grid: false } };
   }
   return {};

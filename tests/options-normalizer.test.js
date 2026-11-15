@@ -102,7 +102,8 @@ test('should_reject_invalid_option_values_when_any_slice_is_malformed', () => {
     [{ text: { direction: 'up' } }, 'unknown-text-direction', 'text.direction'],
     [{ text: { font: 12 } }, 'font-not-a-string', 'text.font'],
     [{ margin: 'big' }, 'margin-not-an-object', 'margin'],
-    [{ margin: { top: -1 } }, 'margin-side-not-a-positive-number', 'margin.top'],
+    [{ margin: { top: -1 } }, 'margin-side-not-a-non-negative-number', 'margin.top'],
+    [{ height: 300, aspectRatio: 2 }, 'aspect-ratio-with-height', 'aspectRatio'],
     [{ title: 5 }, 'title-not-a-string', 'title'],
     [{ channels: 'x' }, 'channels-not-an-object', 'channels'],
     ['nope', 'options-not-an-object', 'options'],
@@ -114,4 +115,32 @@ test('should_reject_invalid_option_values_when_any_slice_is_malformed', () => {
       `${field}: ${JSON.stringify(options)}`,
     );
   }
+});
+
+test('should_accept_a_zero_margin_when_a_side_wants_no_padding', () => {
+  // Zero is a meaningful margin ("no padding on this side"); the old
+  // positive-only guard rejected it as if it were a typo.
+  const { spec } = normalizeOptions({ margin: { top: 0, left: 0 } }, 'bar');
+  assert.deepEqual(spec.margin, { top: 0, left: 0 });
+});
+
+test('should_apply_the_orientation_across_the_bar_family_when_given', () => {
+  // The renderer has always drawn horizontal grouped/stacked bars — the
+  // bar-only guard made that path unreachable and silently dropped the
+  // host's option.
+  for (const type of ['bar', 'groupedBar', 'stackedBar']) {
+    const { spec } = normalizeOptions({ orientation: 'horizontal' }, type);
+    assert.equal(spec.orientation, 'horizontal', type);
+  }
+});
+
+test('should_reject_the_orientation_on_types_outside_the_bar_family_when_given', () => {
+  // An option that means nothing for the type is rejected with a named
+  // reason, like every other slice — never silently ignored.
+  assert.throws(
+    () => normalizeOptions({ orientation: 'horizontal' }, 'line'),
+    (error) => error.code === 'VIS_INVALID_OPTIONS'
+      && error.detail.reason === 'orientation-not-applicable-to-type'
+      && error.detail.field === 'orientation',
+  );
 });
