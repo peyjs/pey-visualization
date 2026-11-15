@@ -15,7 +15,10 @@ import { applyWrapperStyle } from './plot-empty-state.js';
  * @param {Map|null} [seriesVisibility] Per-series visibility state; a
  *   missing entry means visible.
  * @param {Function} [documentOf] Effective-document getter (headless tests).
- * @returns {boolean} True when a legend was rendered.
+ * @returns {Function|null} Release function freeing every checkbox change
+ *   listener — part of the render's "release frees everything it kept"
+ *   contract, so a legend left on an unhealthy host container can never
+ *   report toggles for a dead chartId — or null when no legend was rendered.
  */
 export function renderLegend(container, spec, style, onToggle, seriesVisibility = null, documentOf = () => globalThis.document) {
   const seriesIds = spec.data?.seriesIds ?? [];
@@ -25,7 +28,7 @@ export function renderLegend(container, spec, style, onToggle, seriesVisibility 
   // is the only way the hidden series can ever come back.
   const hasHidden = seriesIds.some((seriesId) => seriesVisibility?.get(seriesId) === false);
   if (spec.legend?.visible === false || (seriesIds.length < 2 && !hasHidden)) {
-    return false;
+    return null;
   }
   const legend = documentOf().createElement('div');
   legend.className = 'pey-vis-legend';
@@ -35,6 +38,7 @@ export function renderLegend(container, spec, style, onToggle, seriesVisibility 
   legend.style.gap = '10px';
   legend.style.margin = '6px 0';
 
+  const checkboxes = [];
   for (const seriesId of seriesIds) {
     const item = documentOf().createElement('label');
     item.style.display = 'inline-flex';
@@ -45,9 +49,9 @@ export function renderLegend(container, spec, style, onToggle, seriesVisibility 
     const checkbox = documentOf().createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = seriesVisibility?.get(seriesId) !== false;
-    checkbox.addEventListener('change', () => {
-      onToggle(seriesId, checkbox.checked);
-    });
+    const onChange = () => onToggle(seriesId, checkbox.checked);
+    checkbox.addEventListener('change', onChange);
+    checkboxes.push([checkbox, onChange]);
 
     const text = documentOf().createElement('span');
     text.textContent = seriesId;
@@ -56,5 +60,9 @@ export function renderLegend(container, spec, style, onToggle, seriesVisibility 
     legend.append(item);
   }
   container.append(legend);
-  return true;
+  return () => {
+    for (const [checkbox, onChange] of checkboxes) {
+      checkbox.removeEventListener('change', onChange);
+    }
+  };
 }

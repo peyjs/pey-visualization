@@ -115,9 +115,13 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
   // cases itself).
   if (spec.data.rows.length === 0) {
     renderEmptyState(container, style, documentOf);
-    renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
+    const releaseLegend = renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
     return {
-      release() {},
+      // The empty state keeps a live legend (the hidden-series checkboxes):
+      // its change listeners are kept resources and die with release().
+      release() {
+        releaseLegend?.();
+      },
     };
   }
 
@@ -195,14 +199,22 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
   // Legend placement: top/left render before the drawing, bottom/right
   // after it — DOM order decides the visual position in this version. The
   // legend reads the FULL series list plus the visibility state, so a
-  // hidden series stays toggleable (checked=false), not deleted from the UI.
+  // hidden series stays toggleable (checked=false), not deleted from the
+  // UI. Its checkbox change listeners count as kept resources: they are
+  // registered for release like the resize observer and the click listener.
   const legendBefore = ['top', 'left'].includes(spec.legend?.position ?? 'top');
-  if (legendBefore) {
-    renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
-  }
+  const releaseLegendBefore = legendBefore
+    ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
+    : null;
   renderCaption(container, spec, style, documentOf);
-  if (!legendBefore) {
-    renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
+  const releaseLegendAfter = !legendBefore
+    ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
+    : null;
+  if (releaseLegendBefore) {
+    releases.push(releaseLegendBefore);
+  }
+  if (releaseLegendAfter) {
+    releases.push(releaseLegendAfter);
   }
 
   let released = false;

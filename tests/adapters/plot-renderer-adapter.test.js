@@ -334,6 +334,15 @@ function countSvg(element) {
   return count;
 }
 
+function findFirstInput(element) {
+  for (const child of element.children ?? []) {
+    if (String(child.tagName ?? '').toLowerCase() === 'input') return child;
+    const found = findFirstInput(child);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
 // Common body of the failed-redraw tests (round-11 rewrite): the fault is
 // injected AFTER a real width change so the resize path actually runs, and
 // each fault site is tested on its own. The first version of this test was
@@ -451,13 +460,66 @@ test('should_stop_reporting_clicks_after_release_when_the_drawing_stays_on_the_c
       data: { rows: ROWS, seriesIds: null },
       legend: { visible: false },
       theme: 'light',
-    }, { onToggle: () => {}, onClick: () => { clicks += 1; } });
+    }, { onToggle: () => { clicks += 1; }, onClick: () => { clicks += 1; } });
     const svg = findSvg(container);
     svg.dispatchEvent({ type: 'click', target: svg });
     assert.equal(clicks, 1, 'clicks report while the chart lives');
     handle.release();
     svg.dispatchEvent({ type: 'click', target: svg });
     assert.equal(clicks, 1, 'the released chart is deaf');
+  } finally {
+    restore();
+  }
+});
+
+test('should_stop_reporting_series_toggles_after_release_when_the_legend_stays_on_the_container', () => {
+  // release() frees "everything the render kept" — the legend's checkbox
+  // change listeners included: a legend left on an unhealthy container by
+  // the remove() guarded cleanup must not keep reporting toggles (and
+  // mutating visibility state) for a dead chartId. Same contract the click
+  // listener already honors.
+  const { adapter, container, restore } = setup();
+  try {
+    let toggles = 0;
+    const handle = adapter.render(container, {
+      type: 'line',
+      data: { rows: ROWS, seriesIds: ['الف', 'ب'] },
+      theme: 'light',
+      seriesVisibility: new Map(),
+    }, { onToggle: () => { toggles += 1; }, onClick: () => {} });
+
+    const checkbox = findFirstInput(container);
+    assert.notEqual(checkbox, undefined, 'the legend rendered a checkbox');
+    checkbox.dispatchEvent({ type: 'change' });
+    assert.equal(toggles, 1, 'toggles report while the chart lives');
+    handle.release();
+    checkbox.dispatchEvent({ type: 'change' });
+    assert.equal(toggles, 1, 'the released legend is deaf');
+  } finally {
+    restore();
+  }
+});
+
+test('should_stop_reporting_series_toggles_after_releasing_the_empty_state_legend', () => {
+  // The empty state keeps a live legend (the hidden-series checkboxes):
+  // its change listeners are kept resources and die with release() too.
+  const { adapter, container, restore } = setup();
+  try {
+    let toggles = 0;
+    const handle = adapter.render(container, {
+      type: 'line',
+      data: { rows: [], seriesIds: ['الف', 'ب'] },
+      theme: 'light',
+      seriesVisibility: new Map([['الف', false], ['ب', false]]),
+    }, { onToggle: () => { toggles += 1; }, onClick: () => {} });
+
+    const checkbox = findFirstInput(container);
+    assert.notEqual(checkbox, undefined, 'the empty-state legend rendered a checkbox');
+    checkbox.dispatchEvent({ type: 'change' });
+    assert.equal(toggles, 1, 'toggles report while the chart lives');
+    handle.release();
+    checkbox.dispatchEvent({ type: 'change' });
+    assert.equal(toggles, 1, 'the released empty-state legend is deaf');
   } finally {
     restore();
   }
