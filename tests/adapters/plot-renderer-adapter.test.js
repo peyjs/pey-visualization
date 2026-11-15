@@ -363,9 +363,12 @@ function assertRedrawFaultKeepsDrawing(injectFault) {
     container.clientWidth = 400;
     injectFault(spec);
     observerCallback();
-    assert.equal(findSvg(container), svg, 'the previous drawing is still on the page');
+    // Object-identity through assert.ok, NOT assert.equal: a failed
+    // equal inspects both values, and inspecting a rendered shim/Plot
+    // graph storms memory (the crash behind the never-run round-11 tests).
+    assert.ok(Object.is(findSvg(container), svg), 'the previous drawing is still on the page');
     assert.ok(findSvg(container).children.length > 0, 'it is not an empty husk');
-    assert.equal(countSvg(container), 1, 'exactly one svg — the failed redraw added none');
+    assert.ok(countSvg(container) === 1, 'exactly one svg — the failed redraw added none');
     handle.release();
   } finally {
     globalThis.ResizeObserver = previousRO;
@@ -423,8 +426,8 @@ test('should_recover_to_one_drawing_with_a_live_click_listener_after_a_failed_re
     container.clientWidth = 500;
     observerCallback();
 
-    assert.equal(countSvg(container), 1, 'the recovered redraw leaves exactly one drawing');
-    assert.notEqual(findSvg(container), svg, 'the recovered drawing is a fresh svg');
+    assert.ok(countSvg(container) === 1, 'the recovered redraw leaves exactly one drawing');
+    assert.ok(!Object.is(findSvg(container), svg), 'the recovered drawing is a fresh svg');
     findSvg(container).dispatchEvent({ type: 'click', target: null });
     assert.equal(clicks, 1, 'the new drawing has a live click listener');
     handle.release();
