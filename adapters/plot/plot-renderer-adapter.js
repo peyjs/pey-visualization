@@ -78,8 +78,8 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
 
       container.replaceChildren();
       applyWrapperStyle(container, style);
-      renderTitle(container, spec, style, documentOf);
       try {
+        renderTitle(container, spec, style, documentOf);
         return renderInto(container, spec, handlers, {
           style,
           palette,
@@ -106,73 +106,87 @@ export function createPlotRendererAdapter(adapterConfig = {}) {
  * @returns {{release: Function}} Handle releasing every kept resource.
  */
 function renderInto(container, spec, handlers, { style, palette, familyBuilder, documentOf }) {
-  // No data is not an error: a quiet placeholder instead of a drawing. Its
-  // release frees nothing (no resources were kept) — the container is
-  // cleared by the next render or by the service on remove. A legend still
-  // renders here when the spec declares series: after hiding every series
-  // the checkboxes must survive, or the hidden series could never be
-  // brought back (renderLegend guards the hidden legend / single-series
-  // cases itself).
-  if (spec.data.rows.length === 0) {
-    renderEmptyState(container, style, documentOf);
-    const releaseLegend = renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
-    return {
-      // The empty state keeps a live legend (the hidden-series checkboxes):
-      // its change listeners are kept resources and die with release().
-      release() {
-        releaseLegend?.();
-      },
-    };
-  }
-
-  const wrapper = documentOf().createElement('div');
-  wrapper.className = 'pey-vis-plot';
-  applyWrapperStyle(wrapper, style);
-
-  // Declared before drawPlot so the closure references a binding that
-  // already exists, not one hoisted by call-order luck.
-  let releaseClick = null;
-  // Redraws only the drawing itself — the wrapper, title, caption and
-  // legend stay put — so resize bursts are cheap and idempotent.
-  const drawPlot = () => {
-    const { width, height } = plotSize(spec, container);
-    const options = {
-      marks: familyBuilder.marks(spec),
-      width,
-      height,
-      style: plotCss(spec, palette),
-      background: palette.background,
-      color: { range: palette.colors },
-      marginTop: spec.margin?.top,
-      marginRight: spec.margin?.right,
-      marginBottom: spec.margin?.bottom,
-      marginLeft: spec.margin?.left,
-    };
-    mergeHints(options, familyBuilder.hints(spec));
-    mergeHints(options, axisScaleOptions(spec, palette));
-    // Plot reads `window.document`, not `globalThis.document`: the
-    // effective document is injected explicitly unless it IS the real one.
-    if (typeof window === 'undefined' || documentOf() !== window.document) {
-      options.document = documentOf();
+  // Every registered resource dies with the handle — or, when the render
+  // itself fails after registration, with the failure: the catch below
+  // sweeps the releases collected so far (deactivate-sweep semantics)
+  // before rethrowing, so a broken caption/legend render cannot leave a
+  // zombie resize observer rebuilding a detached plot on every real resize.
+  const releases = [];
+  const sweepReleases = () => {
+    for (const release of releases) {
+      try {
+        release();
+      } catch {
+        // Releasing an already-released resource is harmless.
+      }
     }
-    // Build the plot FIRST: a throw inside Plot.plot (library fault, low
-    // memory, ...) must leave the PREVIOUS drawing on the page — the failed
-    // resize redraw really does keep it, matching the update path's
-    // rollback contract (clearing before building emptied the chart).
-    const plot = Plot.plot(options);
-    if (releaseClick) {
-      releaseClick();
-      releaseClick = null;
-    }
-    wrapper.replaceChildren();
-    releaseClick = attachClick(plot, handlers.onClick);
-    wrapper.append(plot);
   };
-  drawPlot();
+  try {
+    // No data is not an error: a quiet placeholder instead of a drawing. A
+    // legend still renders here when the spec declares series: after hiding
+    // every series the checkboxes must survive, or the hidden series could
+    // never be brought back (renderLegend guards the hidden legend /
+    // single-series cases itself).
+    if (spec.data.rows.length === 0) {
+      renderEmptyState(container, style, documentOf);
+      const releaseLegend = renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
+      if (releaseLegend) {
+        releases.push(releaseLegend);
+      }
+      return {
+        release() {
+          sweepReleases();
+        },
+      };
+    }
 
-  let lastWidth = plotSize(spec, container).width;
-  const releases = [
-    watchResize(container, () => {
+    const wrapper = documentOf().createElement('div');
+    wrapper.className = 'pey-vis-plot';
+    applyWrapperStyle(wrapper, style);
+
+    // Declared before drawPlot so the closure references a binding that
+    // already exists, not one hoisted by call-order luck.
+    let releaseClick = null;
+    // Redraws only the drawing itself — the wrapper, title, caption and
+    // legend stay put — so resize bursts are cheap and idempotent.
+    const drawPlot = () => {
+      const { width, height } = plotSize(spec, container);
+      const options = {
+        marks: familyBuilder.marks(spec),
+        width,
+        height,
+        style: plotCss(spec, palette),
+        background: palette.background,
+        color: { range: palette.colors },
+        marginTop: spec.margin?.top,
+        marginRight: spec.margin?.right,
+        marginBottom: spec.margin?.bottom,
+        marginLeft: spec.margin?.left,
+      };
+      mergeHints(options, familyBuilder.hints(spec));
+      mergeHints(options, axisScaleOptions(spec, palette));
+      // Plot reads `window.document`, not `globalThis.document`: the
+      // effective document is injected explicitly unless it IS the real one.
+      if (typeof window === 'undefined' || documentOf() !== window.document) {
+        options.document = documentOf();
+      }
+      // Build the plot FIRST: a throw inside Plot.plot (library fault, low
+      // memory, ...) must leave the PREVIOUS drawing on the page — the failed
+      // resize redraw really does keep it, matching the update path's
+      // rollback contract (clearing before building emptied the chart).
+      const plot = Plot.plot(options);
+      if (releaseClick) {
+        releaseClick();
+        releaseClick = null;
+      }
+      wrapper.replaceChildren();
+      releaseClick = attachClick(plot, handlers.onClick);
+      wrapper.append(plot);
+    };
+    drawPlot();
+
+    let lastWidth = plotSize(spec, container).width;
+    const resizeRelease = watchResize(container, () => {
       const width = plotSize(spec, container).width;
       if (width !== lastWidth) {
         lastWidth = width;
@@ -182,55 +196,55 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
           // A failed resize redraw keeps the previous drawing.
         }
       }
-    }),
+    });
+    if (resizeRelease) {
+      releases.push(resizeRelease);
+    }
     // The delegated click listener counts as a kept resource too: release()
     // frees "everything the render kept" (its own contract) — without it, a
     // drawing left on an unhealthy container by remove()'s guarded cleanup
     // would keep listening and publishing events for a dead chartId.
-    () => {
+    releases.push(() => {
       if (releaseClick) {
         releaseClick();
         releaseClick = null;
       }
-    },
-  ];
+    });
 
-  container.append(wrapper);
-  // Legend placement: top/left render before the drawing, bottom/right
-  // after it — DOM order decides the visual position in this version. The
-  // legend reads the FULL series list plus the visibility state, so a
-  // hidden series stays toggleable (checked=false), not deleted from the
-  // UI. Its checkbox change listeners count as kept resources: they are
-  // registered for release like the resize observer and the click listener.
-  const legendBefore = ['top', 'left'].includes(spec.legend?.position ?? 'top');
-  const releaseLegendBefore = legendBefore
-    ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
-    : null;
-  renderCaption(container, spec, style, documentOf);
-  const releaseLegendAfter = !legendBefore
-    ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
-    : null;
-  if (releaseLegendBefore) {
-    releases.push(releaseLegendBefore);
-  }
-  if (releaseLegendAfter) {
-    releases.push(releaseLegendAfter);
-  }
+    container.append(wrapper);
+    // Legend placement: top/left render before the drawing, bottom/right
+    // after it — DOM order decides the visual position in this version. The
+    // legend reads the FULL series list plus the visibility state, so a
+    // hidden series stays toggleable (checked=false), not deleted from the
+    // UI. Its checkbox change listeners count as kept resources: they are
+    // registered for release like the resize observer and the click listener.
+    const legendBefore = ['top', 'left'].includes(spec.legend?.position ?? 'top');
+    const releaseLegendBefore = legendBefore
+      ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
+      : null;
+    renderCaption(container, spec, style, documentOf);
+    const releaseLegendAfter = !legendBefore
+      ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
+      : null;
+    if (releaseLegendBefore) {
+      releases.push(releaseLegendBefore);
+    }
+    if (releaseLegendAfter) {
+      releases.push(releaseLegendAfter);
+    }
 
-  let released = false;
-  return {
-    release() {
-      if (released) {
-        return;
-      }
-      released = true;
-      for (const release of releases) {
-        try {
-          release();
-        } catch {
-          // Releasing an already-released resource is harmless.
+    let released = false;
+    return {
+      release() {
+        if (released) {
+          return;
         }
-      }
-    },
-  };
+        released = true;
+        sweepReleases();
+      },
+    };
+  } catch (error) {
+    sweepReleases();
+    throw error;
+  }
 }

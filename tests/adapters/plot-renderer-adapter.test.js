@@ -525,6 +525,39 @@ test('should_stop_reporting_series_toggles_after_releasing_the_empty_state_legen
   }
 });
 
+test('should_release_registered_resources_when_the_render_fails_after_the_observer_is_armed', () => {
+  // A throw after the resize observer was armed (a broken caption/legend
+  // render, say) must free everything registered so far: a zombie observer
+  // would keep rebuilding a detached plot on every real resize forever,
+  // and the leftover click listener would report for a dead chartId — the
+  // deactivate-sweep semantics, applied to the failed-render path.
+  const previousRO = globalThis.ResizeObserver;
+  let disconnects = 0;
+  globalThis.ResizeObserver = class {
+    constructor(cb) {}
+    observe() {}
+    disconnect() { disconnects += 1; }
+  };
+  const { adapter, container, restore } = setup();
+  try {
+    const spec = { type: 'line', data: { rows: ROWS, seriesIds: null }, theme: 'light' };
+    Object.defineProperty(spec, 'legend', {
+      // Fires inside renderInto, after the observer and the click listener
+      // are registered — the vulnerable window.
+      get() { throw new Error('legend exploded'); },
+    });
+    assert.throws(
+      () => adapter.render(container, spec, { onToggle: () => {}, onClick: () => {} }),
+      (error) => error.message === 'legend exploded',
+    );
+    assert.equal(disconnects, 1, 'the armed observer was freed exactly once');
+    assert.equal(container.children.length, 0, 'no partial DOM survives the failed render');
+  } finally {
+    globalThis.ResizeObserver = previousRO;
+    restore();
+  }
+});
+
 test('should_render_a_real_grouped_bar_when_faceted_marks_walk_their_groups', () => {
   // Smoke gate for the faceted path: Plot's fx/fy groups call
   // node.hasAttribute while upgrading their ARIA — a shim without it hid
