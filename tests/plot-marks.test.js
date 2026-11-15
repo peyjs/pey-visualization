@@ -40,13 +40,18 @@ test('should_build_bar_and_tooltip_marks_when_type_and_orientation_vary', () => 
 });
 
 test('should_build_horizontal_marks_for_every_bar_family_type_when_orientation_is_horizontal', () => {
-  // The horizontal path exists for the whole bar family (x carries the
-  // value, y the category) — the service's bar-only orientation guard just
-  // used to make it unreachable for grouped/stacked.
+  // The horizontal path exists for the whole bar family — the service's
+  // bar-only orientation guard just used to make it unreachable for
+  // grouped/stacked. Plot encodes the orientation in the mark's channel
+  // set: barX (horizontal) carries x1/x2 and no y channel, barY (vertical)
+  // carries y1/y2 and no x channel.
   for (const type of ['bar', 'groupedBar', 'stackedBar']) {
     const horizontal = buildBarMarks(spec(type, xySeries, { orientation: 'horizontal' }));
-    assert.equal(horizontal[0].channels.x.value, 'y', type);
-    assert.equal(horizontal[0].channels.y.value, 'x', type);
+    assert.notEqual(horizontal[0].channels.x1, undefined, `${type}: horizontal marks carry the x1/x2 value channels`);
+    assert.equal(horizontal[0].channels.y1, undefined, `${type}: horizontal marks carry no y1/y2`);
+    const vertical = buildBarMarks(spec(type, xySeries));
+    assert.notEqual(vertical[0].channels.y1, undefined, `${type}: vertical marks carry the y1/y2 value channels`);
+    assert.equal(vertical[0].channels.x1, undefined, `${type}: vertical marks carry no x1/x2`);
   }
 });
 
