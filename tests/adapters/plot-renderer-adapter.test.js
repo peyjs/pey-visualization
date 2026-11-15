@@ -558,6 +558,55 @@ test('should_release_registered_resources_when_the_render_fails_after_the_observ
   }
 });
 
+test('should_release_the_top_legend_listeners_when_the_caption_render_fails', () => {
+  // Register-at-creation: the top legend's release must be registered
+  // BEFORE the caption renders — otherwise a caption failure in the narrow
+  // build-without-registration window orphans the legend's checkbox change
+  // listeners (the sweep only frees what was registered).
+  const previousRO = globalThis.ResizeObserver;
+  let disconnects = 0;
+  globalThis.ResizeObserver = class {
+    constructor(cb) {}
+    observe() {}
+    disconnect() { disconnects += 1; }
+  };
+  const { adapter, container, restore } = setup();
+  try {
+    // Record every checkbox the legend builds: the failed render clears the
+    // container, so creation time is the only place to reach them.
+    const createdInputs = [];
+    const shimDocument = globalThis.document;
+    const originalCreateElement = shimDocument.createElement.bind(shimDocument);
+    shimDocument.createElement = (tag) => {
+      const element = originalCreateElement(tag);
+      if (tag === 'input') {
+        createdInputs.push(element);
+      }
+      return element;
+    };
+
+    let toggles = 0;
+    const spec = { type: 'line', data: { rows: ROWS, seriesIds: ['الف', 'ب'] }, theme: 'light', seriesVisibility: new Map() };
+    Object.defineProperty(spec, 'caption', {
+      // Fires between the top legend's creation and its registration.
+      get() { throw new Error('caption exploded'); },
+    });
+    assert.throws(
+      () => adapter.render(container, spec, { onToggle: () => { toggles += 1; }, onClick: () => {} }),
+      (error) => error.message === 'caption exploded',
+    );
+    assert.ok(createdInputs.length >= 2, 'the top legend built its checkboxes');
+    for (const checkbox of createdInputs) {
+      checkbox.dispatchEvent({ type: 'change' });
+    }
+    assert.equal(toggles, 0, 'the caption failure freed the top legend listeners too');
+    assert.equal(disconnects, 1, 'the observer sweep is intact');
+  } finally {
+    globalThis.ResizeObserver = previousRO;
+    restore();
+  }
+});
+
 test('should_render_a_real_grouped_bar_when_faceted_marks_walk_their_groups', () => {
   // Smoke gate for the faceted path: Plot's fx/fy groups call
   // node.hasAttribute while upgrading their ARIA — a shim without it hid

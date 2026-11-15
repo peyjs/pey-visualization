@@ -216,21 +216,23 @@ function renderInto(container, spec, handlers, { style, palette, familyBuilder, 
     // after it — DOM order decides the visual position in this version. The
     // legend reads the FULL series list plus the visibility state, so a
     // hidden series stays toggleable (checked=false), not deleted from the
-    // UI. Its checkbox change listeners count as kept resources: they are
-    // registered for release like the resize observer and the click listener.
+    // UI. Its checkbox change listeners count as kept resources: each
+    // legend's release is registered IMMEDIATELY after it is created — a
+    // later render step (the caption, say) failing in the narrow
+    // build-without-registration window must not orphan the listeners.
     const legendBefore = ['top', 'left'].includes(spec.legend?.position ?? 'top');
-    const releaseLegendBefore = legendBefore
-      ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
-      : null;
-    renderCaption(container, spec, style, documentOf);
-    const releaseLegendAfter = !legendBefore
-      ? renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf)
-      : null;
-    if (releaseLegendBefore) {
-      releases.push(releaseLegendBefore);
+    if (legendBefore) {
+      const releaseLegend = renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
+      if (releaseLegend) {
+        releases.push(releaseLegend);
+      }
     }
-    if (releaseLegendAfter) {
-      releases.push(releaseLegendAfter);
+    renderCaption(container, spec, style, documentOf);
+    if (!legendBefore) {
+      const releaseLegend = renderLegend(container, spec, style, handlers.onToggle, spec.seriesVisibility, documentOf);
+      if (releaseLegend) {
+        releases.push(releaseLegend);
+      }
     }
 
     let released = false;
