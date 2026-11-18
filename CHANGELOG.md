@@ -1,13 +1,16 @@
-# Changelog
+# تاریخچه تغییرات
 
-## [1.0.0] - 1405-08-24
+تمام تغییرات این پروژه در همین فایل ثبت می‌شود.
+قالب فایل بر پایه‌ی [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) و نسخه‌گذاری بر پایه‌ی [Semantic Versioning](https://semver.org/) است.
 
-### Added
+## [1.0.0] - 1405-08-25
 
-- `pey.visualization.service` with `create`, `update` and `remove`: fourteen chart types in five families — series (line, timeSeries, area, stackedArea), bar (bar, groupedBar, stackedBar), point (scatter, dot, bubble), distribution (histogram, boxPlot, density) and heatmap — each an independent chart with its own id, drawn into a host-provided container (an element or a CSS selector, resolved once). Other charts are never disturbed by one chart's removal.
-- The host owns the data and its meaning: rows are validated per family into canonical channels (renamable through `options.channels`), empty data renders an empty state instead of an error, and every invalid input fails with its own structured code (`VIS_UNKNOWN_CHART_TYPE`, `VIS_INVALID_CONTAINER`, `VIS_INVALID_DATA`, `VIS_INVALID_OPTIONS`, `VIS_RENDER_FAILED`, `SERVICE_UNAVAILABLE`). Raw chart-library errors never cross the boundary — they ride in `detail.cause` only.
-- Display options, all optional with good defaults: light/dark theme or a full custom palette, title and caption, a legend with configurable position (top/right/bottom/left), axis labels/domains and host-provided tick formats, RTL/LTR text direction independent of the axes, host fonts and sizes, explicit width/height or aspect ratio (responsive to the container's width by default), margins (zero per side is allowed), and `orientation: vertical|horizontal` across the whole bar family.
-- Interaction: pointer-following tooltips built from each row's own channels (aggregated families — histogram, boxPlot, density — intentionally have none, their marks regroup rows), a legend toggle per series that hides/shows it immediately and survives updates (a hidden series stays in the legend as an unchecked checkbox, so it can always come back), and click reports with series/datum identity (an ambiguous or unattributable element reports no identity rather than a wrong one). Events carry chart/series identity only — `visualization:clicked`, `visualization:series-toggled`, `visualization:render-failed` — never raw payloads.
-- Resilience: a failed update re-renders the previous drawing and shape (and stays updatable afterwards); a failed series toggle reverts the choice, redraws the reverted state and reports the structured failure, so picture, state and legend always tell one story; a failed resize redraw keeps the previous drawing; a failed first render frees every resource the render had registered so far (the resize observer and the click and legend listeners included), leaving no zombie observer on the host container; removal and shutdown release every resource even when the host container is broken.
-- Responsive redraws on container resize (ResizeObserver, coalesced per frame, redrawing the drawing only — title, caption and legend stay put).
-- Observable Plot sits behind an internal renderer adapter (`PlotRendererAdapter`, swappable through the manifest config) and never leaks into the service surface. `docs/requirements.md` is the construction source of truth.
+### افزوده‌شده
+
+- سرویس `pey.visualization.service` با متدهای `create`، `update` و `remove` برای چهارده نوع نمودار در پنج خانواده افزوده شد.
+- اعتبارسنجی داده به تفکیک خانواده اجرا شد و دادهٔ خالی به‌جای خطا، حالت خالی می‌کشد.
+- گزینه‌های نمایش کامل شدند: تم روشن/تاریک یا پالت اختصاصی، عنوان و توضیح، راهنما با موقعیت دلخواه، محورها و قالب برچسب میزبان، جهت متن مستقل از محورها، اندازه، حاشیه و جهت میله‌ای.
+- تعامل‌ها افزوده شدند: tooltip چسبیده به نشانگر، سوییچ سری با راهنما و گزارش کلیک با شناسهٔ سری و datum.
+- تاب‌آوری رسم اجرا شد: شکست به‌روزرسانی، سوییچ یا تغییر اندازه به حالت قبلی برمی‌گردد و شکست رسم نخستین همهٔ منابع ثبت‌شده را آزاد می‌کند.
+- رسم مجدد واکنش‌گرا به تغییر اندازه ظرف با ResizeObserver و تجمیع در هر فریم افزوده شد.
+- کتابخانهٔ رسم Observable Plot پشت آداپتور رندر داخلی (`PlotRendererAdapter`) پنهان است و در سطح سرویس نشانی ندارد.

@@ -1,105 +1,125 @@
-# مرجع pey.visualization
+# pey.visualization — Reference
 
-این سند از `docs/requirements.md` (منبع حقیقت ساخت) پیروی می‌کند و قرارداد مانیفست را توضیح می‌دهد.
+Self-contained reference for the `pey.visualization` feature plugin. This document follows `docs/requirements.md` (the construction source of truth) and explains the manifest contract.
 
-## ۱. هدف
+## Purpose
 
-افزونه feature پی برای رسم نمودار: میزبان داده‌ی آماده و تنظیمات نمایش را می‌دهد، افزونه رسم می‌کند و تعاملات مورد توافق را ارائه می‌دهد و خبر می‌دهد. افزونه هیچ داده‌ای دریافت/ذخیره نمی‌کند، معنای تجاری نمی‌فهمد و تنها محاسباتِ خودِ نوع نمودار (بازه‌بندی، چارک‌ها، چیدن لایه‌ها، مقیاس‌ها) را انجام می‌دهد.
+Chart rendering: the host supplies prepared data and display settings, the plugin draws the chart, provides the agreed interactions and reports events. The plugin receives and stores no data, understands no business meaning, and performs only the computations the chart type itself needs (binning, quantiles, stacking, scales).
 
-## ۲. مرز کتابخانه رسم
+## Structure
 
-کتابخانه رسم (Observable Plot) تنها زیر `adapters/plot/` به کار می‌رود و پشت «قرارداد رندرکننده‌ی داخلی» پنهان است: `render(container, spec, handlers) → { release() }`. `spec` ساختاری میانی و بی‌طرف از کتابخانه است (نوع، داده‌ی نرمال، گزینه‌های نمایش). هیچ نوع، پیام یا خطایی از کتابخانه در سرویس نیست؛ علت خام شکست رسم فقط در `detail.cause` خطای ساخت‌یافته می‌ماند. تعویض کتابخانه = یک آداپتور تازه، بدون تغییر مصرف‌کننده‌ها.
+- `manifest.json` — plugin contract (identity, service, events, config).
+- `index.js` — lifecycle wiring (`prepare` / `activate`).
+- `lib/constants.js` — names, codes, type families, defaults.
+- `lib/error.js` — structured errors that keep their cause.
+- `lib/chart-store.js` — the active-chart store (live references).
+- `lib/renderer-loader.js` — the renderer-adapter loader (dynamic import).
+- `lib/visualization-service.js` — `create`/`update`/`remove` + events.
+- `lib/spec/data-validator.js` — validation dispatch by type.
+- `lib/spec/options-normalizer.js` — display-option normalization.
+- `lib/spec/charts/*.js` — the five family validators.
+- `adapters/plot/*.js` — style, size, legend, interaction, empty state.
+- `adapters/plot/plot-marks/*.js` — spec-to-Plot-mark translation.
+- `tests/` — plugin tests (`node:test`, fake renderer only).
+- `docs/reference.md` — this file.
+- `CHANGELOG.md` — the plugin's version history.
 
-## ۳. ساختار فایل‌ها (هر فایل یک مسئولیت)
+## Dependencies
 
-```text
-index.js                        — سیم‌کشی چرخه عمر
-lib/constants.js                — نام‌ها، کدها، خانواده‌های نوع، پیش‌فرض‌ها
-lib/error.js                    — خطای ساخت‌یافته + نگه‌داشتن علت
-lib/chart-store.js              — انبار نمودارهای فعال (مرجع زنده)
-lib/renderer-loader.js          — لودر آداپتور رندر (import دینامیک)
-lib/visualization-service.js    — create/update/remove + رویدادها
-lib/spec/data-validator.js      — ره‌گیری اعتبارسنجی بر اساس نوع
-lib/spec/options-normalizer.js  — نرمال‌سازی گزینه‌های نمایش
-lib/spec/charts/*.js            — اعتبارسنج پنج خانواده
-adapters/plot/*.js              — استایل، اندازه، راهنما، تعامل، حالت خالی
-adapters/plot/plot-marks/*.js   — ترجمه spec به markهای Plot
-```
+- **Required:** none.
+- **Optional:** none.
 
-## ۴. API عمومی — سرویس `pey.visualization.service`
+The npm dependency `@observablehq/plot` is internal to the plugin: it is imported only under `adapters/plot/`, behind the internal renderer contract `render(container, spec, handlers) → { release() }`, where `spec` is a library-neutral intermediate shape (type, normalized data, display options). No type, message or error from the chart library exists in the service; a raw render-failure cause stays only in `detail.cause` of the structured error. Swapping the library = one new adapter, no consumer change.
 
-### ۴.۱. `create({ container, type, data, options? })`
+## Public API
 
-یک نمودار مستقل می‌سازد و `{ id }` برمی‌گرداند. `container` یک Element است یا رشته‌ی selector که یک‌بار هنگام ساخت resolve می‌شود (`VIS_INVALID_CONTAINER`). `type` یکی از انواع بخش ۵ است (`VIS_UNKNOWN_CHART_TYPE`). داده و گزینه‌ها پیش از رسم اعتبارسنجی می‌شوند. داده‌ی خالی خطا نیست — نمودار «حالت خالی» نشان می‌دهد.
+Service: `pey.visualization.service`.
 
-### ۴.۲. `update(id, { data?, options? })`
+### `create({ container, type, data, options? })`
 
-نمودار موجود را با داده‌ی تازه، گزینه‌های تازه یا هر دو دوباره رسم می‌کند؛ داده بدون گزینه، گزینه‌های قبلی را نگه می‌دارد و برعکس. رسم مجدد کل نمودار است (بدون تعهد به انتقال تدریجی). اگر رسم مجدد شکست بخورد، رسم قبلی روی صفحه می‌ماند و خطا با کد `VIS_RENDER_FAILED` می‌آید. id ناشناخته → `VIS_UNKNOWN_CHART`.
+Creates one independent chart and returns `{ id }`. The `container` is an Element or a CSS selector string, resolved once at creation (`VIS_INVALID_CONTAINER`). `type` is one of the chart types below (`VIS_UNKNOWN_CHART_TYPE`). Data and options are validated before drawing; empty data is not an error — the chart renders an empty state.
 
-### ۴.۳. `remove(id)`
+### `update(id, { data?, options? })`
 
-نمودار را کامل برمی‌دارد: نمایش از صفحه برداشته می‌شود، همه‌ی منابع آزاد می‌شوند (`release`) و بقیه‌ی نمودارها بی‌تغییر ادامه می‌دهند. خاموشی افزونه همین کار را برای همه‌ی نمودارها می‌کند.
+Re-renders an existing chart with new data, new options or both; data given alone keep the previous options and vice versa. Re-rendering redraws the whole chart (no partial transitions are promised). A failed re-render keeps the previous drawing on the page and surfaces `VIS_RENDER_FAILED`. An unknown id → `VIS_UNKNOWN_CHART`.
 
-## ۵. انواع نمودار
+### `remove(id)`
 
-پنج خانواده — اعتبارسنجی و رسم هر خانواده در ماژول خودش است:
+Takes a chart away completely: the display leaves the page, every resource is freed (`release`), and other charts continue untouched. Plugin shutdown does the same for all charts.
 
-| خانواده | انواع | داده (فیلدهای نام‌گذاری‌شدنی) |
+### Chart types
+
+Five families — validation and rendering of each family live in their own module:
+
+| Family | Types | Data (renamable fields) |
 |---|---|---|
-| series | `line`، `timeSeries`، `area`، `stackedArea` | `x` (اسکالر، یا `Date` فقط روی همین کانال زمانی)، `y` (عدد)، `series` اختیاری — الزامی برای `stackedArea` |
-| bar | `bar`، `groupedBar`، `stackedBar` | `x` (دسته)، `y` (عدد)، `series` اختیاری — الزامی برای گروهی/انباشته |
-| point | `scatter`، `dot`، `bubble` | `x`، `y` و برای bubble `size` عددی |
-| distribution | `histogram`، `density`، `boxPlot` | histogram `x` عددی؛ density `x` و `y` عددی؛ boxPlot `x` دسته و `y` عدد |
-| heatmap | `heatmap` | `x`، `y` و `value` عددی |
+| series | `line`, `timeSeries`, `area`, `stackedArea` | `x` (scalar, or `Date` on the time channel only), `y` (number), `series` optional — required for `stackedArea` |
+| bar | `bar`, `groupedBar`, `stackedBar` | `x` (category), `y` (number), `series` optional — required for grouped/stacked |
+| point | `scatter`, `dot`, `bubble` | `x`, `y`, and a numeric `size` for bubble |
+| distribution | `histogram`, `density`, `boxPlot` | histogram: numeric `x`; density: numeric `x` and `y`; boxPlot: category `x` and numeric `y` |
+| heatmap | `heatmap` | `x`, `y`, numeric `value` |
 
-نام فیلدهای میزبان با `options.channels` (مثل `{ x: 'day', y: 'amount' }`) به کانال‌های نگاشت می‌شود؛ پیش‌فرض همان نام کانال است. نمودار دایره‌ای و دوناتی پشتیبانی نمی‌شوند.
+The host's field names map to channels through `options.channels` (e.g. `{ x: 'day', y: 'amount' }`); the default is the channel name itself. Pie/donut charts are not supported.
 
-## ۶. گزینه‌های نمایش (options)
+### Display options
 
-همه اختیاری‌اند؛ پیش‌فرض‌ها بدون تنظیم ظاهر مناسب می‌دهند:
+All optional; defaults look right without any setting:
 
-- **تم:** `theme: 'light' | 'dark'` یا پالت اختصاصی `palette: { colors, background, textColor, gridColor, axisColor }`. افزونه تم را تشخیص نمی‌دهد؛ با تغییر گزینه دوباره رسم می‌شود.
-- **اندازه:** `width`، `height` یا `aspectRatio` (پیش‌فرض ۱٫۶)؛ بدون عرض صریح، عرض ظرف به کار می‌رود. `height` و `aspectRatio` هم‌زمان پذیرفته نمی‌شوند (`aspect-ratio-with-height`).
-- **حاشیه:** `margin: { top, right, bottom, left }` — هر ضلع عددی نامنفی (صفر یعنی بدون حاشیه).
-- **عنوان و توضیح:** `title`، `caption` — متنی که میزبان آماده کرده.
-- **راهنما:** `legend: { visible, position: 'top'|'right'|'bottom'|'left' }` — با بیش از یک سری — یا وقتی دست‌کم یک سری مخفی است — نمایش داده می‌شود و سوییچ هر سری را می‌دهد.
-- **محورها:** `axes.x / axes.y` با `label`، `domain: [min, max]` و `tickFormat` (تابع قالب میزبان — افزونه هیچ قالبی از خودش ندارد).
-- **متن:** `text: { direction: 'rtl'|'ltr', font, fontSize }` — جهت متن مستقل از جهت محورها.
-- **جهت میله‌ای:** `orientation: 'vertical'|'horizontal'` — برای کل خانواده bar (`bar`، `groupedBar`، `stackedBar`)؛ روی انواع دیگر با `orientation-not-applicable-to-type` رد می‌شود.
-- **کانال‌ها:** `channels` (بخش ۵).
+- **Theme:** `theme: 'light' | 'dark'` or a custom `palette: { colors, background, textColor, gridColor, axisColor }`. The plugin does not detect theme changes; it re-renders when the option changes.
+- **Size:** `width`, `height`, or `aspectRatio` (default 1.6); without an explicit width the container's width applies. `height` and `aspectRatio` together are refused (`aspect-ratio-with-height`).
+- **Margin:** `margin: { top, right, bottom, left }` — each side a non-negative number (zero means no margin).
+- **Title and caption:** `title`, `caption` — host-prepared text.
+- **Legend:** `legend: { visible, position: 'top'|'right'|'bottom'|'left' }` — shown with more than one series, or when at least one series is hidden, and it switches each series.
+- **Axes:** `axes.x / axes.y` with `label`, `domain: [min, max]` and `tickFormat` (a host format function — the plugin has no format of its own).
+- **Text:** `text: { direction: 'rtl'|'ltr', font, fontSize }` — text direction independent of the axis directions.
+- **Bar orientation:** `orientation: 'vertical'|'horizontal'` — for the whole bar family (`bar`, `groupedBar`, `stackedBar`); refused on other types with `orientation-not-applicable-to-type`.
+- **Channels:** `channels` (see Chart types).
 
-## ۷. تعامل و رویدادها
+## Events
 
-- **Tooltip:** با markهای tip خود Plot که به نشانگر می‌چسبند — برای همهٔ خانواده‌های سطری (series/bar/point/heatmap)؛ عنوان، مقدار کانال‌های همان ردیف است (سری · x · y و برای heatmap مقدار). خانوادهٔ تجمعی (histogram/boxPlot/density) tooltip ندارد چون markها ردیف‌ها را دوباره گروه می‌کنند و نسبت‌دادن عنوان به ردیف نادرست می‌شد.
-- **سوییچ سری:** چک‌باکس راهنما → نمایش/مخفی فوری سری، رویداد `visualization:series-toggled {chartId, seriesId, visible}` (فقط پس از redraw موفق منتشر می‌شود)؛ انتخاب کاربر در به‌روزرسانی‌های بعدی هم حفظ می‌شود. وضعیت visibility روی spec رندر سوار است و راهنما سریِ مخفی را با چک‌باکس خاموش نمایش می‌دهد.
-- **شکست redraw خودکار:** اگر redrawای که خود سرویس آغاز کرده (امروز: redraw پس از toggle) شکست بخورد، انتخاب کاربر برمی‌گردد و وضعیت برگردانده‌شده دوباره رسم می‌شود؛ رویداد `visualization:render-failed {chartId, operation, code}` شکست را به میزبان اعلام می‌کند (خطای خام رندرکننده هرگز عبور نمی‌کند).
-- **کلیک:** کلیک روی اجزای قابل‌شناسایی نمودار → `visualization:clicked {chartId, seriesId, datum}`؛ کلیک روی فضای خالی نمودار فقط chartId می‌دهد.
-- **شکست Event Bus:** انتشار هر رویداد در یک catch آرام می‌شود و هرگز فراخوانِ سرویس را نمی‌اندازد — افزونه لاگر ندارد و به‌هم‌ریختن سرویس مصورسازی به‌خاطر باسِ خروب، خلاف سیاست تنزل نرم سند نیازمندی است.
-- پردازش انتخاب کاربر و تغییرات تجاری با میزبان است؛ رویدادها فقط شناسه و datum نقطه را می‌آورند، نه داده‌ی سری کامل.
+| Event | Data | When |
+|---|---|---|
+| `visualization:clicked` | `{ chartId, seriesId, datum }` | The user clicked a chart part the renderer supports selecting; a click on empty chart space reports only `chartId`. |
+| `visualization:series-toggled` | `{ chartId, seriesId, visible }` | The user switched a series through the legend (published only after a successful redraw). |
+| `visualization:render-failed` | `{ chartId, operation, code }` | A redraw the service initiated on its own (today: the redraw after a toggle) failed and was rolled back. |
 
-## ۸. واکنش‌گرایی
+Events carry chart/series identity and the clicked datum only — never a raw payload beyond it. A failed event publish is settled in a catch and never throws out of the service call: the plugin has no logger, and a broken bus must not take the visualization service down (soft-degradation policy of the requirements).
 
-با تغییر اندازه ظرف، فقط رسم دوباره (با عرض جدید ظرف) انجام می‌شود؛ عنوان/توضیح/راهنما سر جای خود می‌مانند. در محیط‌های بدون ResizeObserver واکنش‌گرایی بی‌اثر است و به‌جای آن عرض اولیه به کار می‌رود.
+## Errors Reference
 
-## ۹. خطاها
+| Code | Situation | Type |
+|---|---|---|
+| `VIS_INVALID_CONTAINER` | The container is not a valid Element/selector, or the selector matched nothing. | operational |
+| `VIS_UNKNOWN_CHART_TYPE` | Unknown or unsupported chart type. | operational |
+| `VIS_INVALID_DATA` | Invalid/incomplete data (cause carries `reason`, the field name and the row number in `detail`). | operational |
+| `VIS_INVALID_OPTIONS` | Invalid options (cause and option name in `detail`). | operational |
+| `VIS_RENDER_FAILED` | Drawing failed (the raw library cause in `detail.cause`). | operational |
+| `VIS_UNKNOWN_CHART` | Unknown id in `update`/`remove`. | operational |
+| `VIS_ADAPTER_NOT_FOUND` / `VIS_ADAPTER_INVALID` / `VIS_ADAPTER_INITIALIZATION_FAILED` | Startup: the configured renderer adapter could not be found, is incomplete, or failed to initialize. | startup |
+| `SERVICE_UNAVAILABLE` | Called after deactivation/shutdown. | operational |
 
-| کد | وضعیت |
-|---|---|
-| `VIS_INVALID_CONTAINER` | ظرف Element/selector معتبر نیست یا selector چیزی پیدا نکرد |
-| `VIS_UNKNOWN_CHART_TYPE` | نوع نمودار ناشناخته یا ناپشتیبان |
-| `VIS_INVALID_DATA` | داده نامعتبر/ناقص (علت با `reason`، نام فیلد و شماره ردیف در detail) |
-| `VIS_INVALID_OPTIONS` | گزینه‌ها نامعتبر (علت و نام گزینه در detail) |
-| `VIS_RENDER_FAILED` | شکست در رسم (علت خام کتابخانه در `detail.cause`) |
-| `VIS_UNKNOWN_CHART` | id ناشناخته در update/remove |
-| `VIS_ADAPTER_NOT_FOUND` / `_INVALID` / `_INITIALIZATION_FAILED` | خطاهای startup آداپتور رندر |
-| `SERVICE_UNAVAILABLE` | فراخوانی پس از غیرفعال‌شدن/خاموشی |
+`source` is always `pey.visualization`; the raw library message never crosses. Missing data is not an error.
 
-`source` همه‌ی خطاها `pey.visualization` است و پیام خام کتابخانه هرگز بیرون نمی‌آید. نبود داده خطا نیست.
+## Config
 
-## ۱۰. محاسبات مجاز
+| Key | Type | Required | Default | Purpose |
+|---|---|---|---|---|
+| `adapter` | `string` | No | `'PlotRendererAdapter'` | The renderer adapter to load. |
+| `adapterConfig` | `object` | No | `{}` | Adapter-specific configuration. |
+| `theme` | `string` | No | `'light'` | The default display theme (light/dark). |
 
-فقط محاسباتِ خودِ نوع نمودار: بازه‌بندی هیستوگرام، چارک/داده پرت جعبه‌ای، برآورد چگالی، چیدن لایه‌های انباشته، مقیاس رنگ نقشه حرارتی، مقیاس و بازه محورها. هر محاسبه‌ی تجاری (جمع بر حسب دسته، میانگین، فیلتر، مرتب‌سازی، گروه‌بندی) با میزبان است.
+## Business Rules
 
-## ۱۱. محدودیت‌های نسخه فعلی
+- The host owns the data and its meaning; the plugin owns the drawing. The only allowed computations are the chart type's own: histogram binning, box-plot quantiles/outliers, density estimation, stacking of accumulated layers, heatmap color scaling, axis scales and domains. Any business computation (sums by category, averages, filtering, sorting, grouping) belongs to the host.
+- One chart per `create`, independent by id: one chart's removal never disturbs another.
+- A failed `update` re-renders the previous drawing and shape (and stays updatable afterwards); a failed series toggle reverts the choice, redraws the reverted state and reports the structured failure — picture, state and legend always tell one story; a failed resize redraw keeps the previous drawing; a failed first render frees every resource the render had registered so far (the resize observer and the click and legend listeners included), leaving no zombie observer on the host container; removal and shutdown release every resource even when the host container is broken.
+- Responsive redraws run on container resize (ResizeObserver, coalesced per frame, redrawing the drawing only — title, caption and legend stay put); in environments without ResizeObserver, responsiveness is inert and the initial width applies.
+- The tooltip rides the pointer, built from each row's own channels (title = the row's channels; for heatmap the value) — for all row families (series/bar/point/heatmap). The aggregated families (histogram/boxPlot/density) have none on purpose: their marks regroup rows, so attributing a title to a row would be wrong.
+- A hidden series stays in the legend as an unchecked checkbox, so it can always come back; the visibility state rides the render spec and survives updates.
+- The user's selection processing and any business change is the host's; events carry identity only.
 
-انیمیشن و Zoom/Pan پیشرفته، خروجی PNG/SVG/PDF، هماهنگی تعاملی بین نمودارها، دسترسی‌پذیری پیشرفته، بهینه‌سازی حجم بسیار زیاد داده، و نمودار دایره‌ای/دوناتی خارج از دامنه‌اند. رندر واقعی با Observable Plot به مرورگر نیاز دارد و در سوئیت Node با آداپتور جعلی پوشش داده می‌شود؛ بازبینی دستی رندر در مرورگر بر عهده‌ی میزبان است.
+## Constraints
+
+- Animation, advanced zoom/pan, PNG/SVG/PDF export, cross-chart interactive coordination, advanced accessibility, very-large-data optimization, and pie/donut charts are out of scope for this version.
+- Real rendering with Observable Plot requires a browser; the Node suite covers everything with a fake renderer, and a manual browser render review belongs to the host.
+- Do not use this service for data preparation or business aggregation; hand it rows it can validate per family.
